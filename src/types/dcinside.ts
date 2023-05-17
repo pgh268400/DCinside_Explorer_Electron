@@ -26,6 +26,7 @@ interface Article {
   gall_date: string;
   gall_count: number;
   gall_recommend: number;
+  reply_num: number;
 }
 
 export { Gallary, Search, Page, Article };

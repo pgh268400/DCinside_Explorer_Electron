@@ -1,6 +1,6 @@
 "use strict";
 
-import { app, protocol, BrowserWindow, ipcMain } from "electron";
+import { app, protocol, BrowserWindow, ipcMain, shell } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 
@@ -83,11 +83,15 @@ app.on("ready", async () => {
   }
   createWindow();
 
+  // 파싱 객체를 ipcMain 에서 전역적으로 사용할 수 있도록 한다.
+  let parser: DCAsyncParser;
+
   // 웹 요청 처리
   ipcMain.on("web-request", async (event, arg: DCWebRequest) => {
     const { id, repeat_cnt, keyword, search_type } = arg;
     try {
-      const parser = await DCAsyncParser.create(id);
+      // const parser = await DCAsyncParser.create(id);
+      parser = await DCAsyncParser.create(id);
       const result = await parser.search(
         search_type,
         keyword,
@@ -103,8 +107,18 @@ app.on("ready", async () => {
       console.error(e);
       event.sender.send("web-request-response", []);
     }
+  });
 
-    // result 데이터를 json 파일로 저장
+  ipcMain.on("close-me", (event, arg) => {
+    app.quit();
+  });
+
+  ipcMain.on("open-link", async (event, gallary_id: string, no: string) => {
+    if (parser) {
+      const g_type = parser.get_garllery_type();
+      const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallary_id}&no=${no}`;
+      shell.openExternal(url);
+    }
   });
 });
 

@@ -3,27 +3,31 @@
 <template>
   <v-app>
     <!-- 상단바(앱바) -->
-
-    <v-app-bar
-      app
-      color="#3B4890"
-      id="appbar"
-      dark
-      @mousedown="startDrag"
-      @mousemove="drag"
-      @mouseup="endDrag"
-      @mouseleave="endDrag"
-    >
-      <v-app-bar-nav-icon @click="toggle_drawer"></v-app-bar-nav-icon>
-      <v-toolbar-title class="pl-1">{{ title }}</v-toolbar-title>
-      <v-spacer></v-spacer>
-      <v-btn icon @click="minimize_window">
-        <v-icon>mdi-window-minimize</v-icon>
-      </v-btn>
-      <v-btn icon @click="close_window">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
-    </v-app-bar>
+    <div style="user-select: none">
+      <v-app-bar
+        app
+        color="#3B4890"
+        id="appbar"
+        dark
+        @mousedown="start_drag"
+        @mousemove="drag"
+        @mouseup="end_drag"
+        @mouseleave="end_drag"
+      >
+        <v-app-bar-nav-icon
+          @click="isOpenMenu = !isOpenMenu"
+        ></v-app-bar-nav-icon>
+        <v-toolbar-title class="pl-1">{{ title }}</v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="minimize_window">
+          <v-icon>mdi-window-minimize</v-icon>
+        </v-btn>
+        <v-btn icon @click="close_window">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-app-bar>
+    </div>
+    <!-- 본문 -->
     <v-main>
       <v-container>
         <v-row>
@@ -40,7 +44,12 @@
             <v-text-field label="갤러리 ID" v-model="gallary_id"></v-text-field>
           </v-col>
           <v-col cols="5">
-            <v-text-field label="검색어" v-model="keyword"></v-text-field>
+            <v-text-field
+              label="검색어"
+              v-model="keyword"
+              :spellcheck="false"
+              @keypress="search_keypress"
+            ></v-text-field>
           </v-col>
           <v-col>
             <v-btn
@@ -61,6 +70,27 @@
             </template>
           </v-progress-linear>
         </div>
+        <!-- <template>
+          <v-lazy
+            min-height="100"
+            :options="{ threshold: 0.25 }"
+            :style="{ width: '100%' }"
+            transition="fade-transition"
+            :value="false"
+          >
+            <v-data-table
+              v-if="data_table.items"
+              calculate-widths
+              class="items-table-container"
+              dense
+              disable-filtering
+              :headers="data_table.headers"
+              :items="data_table.items"
+              :mobile-breakpoint="0"
+            >
+            </v-data-table>
+          </v-lazy>
+        </template> -->
         <v-data-table
           :footer-props="{
             'items-per-page-text': '페이지 당 보여질 갯수',
@@ -70,23 +100,68 @@
           :items="data_table.items"
         >
           <template v-slot:[`item.gall_num`]="{ value }">
-            <a href="#" @click="open_link(gallary_id, value)">
-              {{ value }}
-            </a>
+            <u>
+              <a @click="open_link(gallary_id, value)">
+                {{ value }}
+              </a>
+            </u>
           </template>
+          <template slot="no-data"> 데이터가 존재하지 않습니다. </template>
         </v-data-table>
       </v-container>
     </v-main>
+    <!-- 다이얼 로그 -->
+    <v-dialog v-model="isOpenMenu" width="500px" class="rounded-0">
+      <v-card>
+        <v-toolbar density="compact" color="#3B4890" dense>
+          <v-toolbar-title>
+            <span style="color: white">Settings</span>
+          </v-toolbar-title>
+        </v-toolbar>
+        <div class="pa-2">
+          <v-subheader>프로그램 전체 동작 설정</v-subheader>
+          <v-list-item class="pd-0">
+            <v-list-item-content class="pb-0">
+              <v-text-field
+                label="최대 병렬 처리 횟수"
+                outlined
+                clearable
+                value="100"
+                height="auto"
+              ></v-text-field>
+            </v-list-item-content>
+          </v-list-item>
+          <v-divider></v-divider>
+          <v-subheader>유저 설정</v-subheader>
+          <v-list-item>
+            <v-list-item-action>
+              <v-checkbox></v-checkbox>
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title
+                >검색 시 기존 검색 결과 초기화</v-list-item-title
+              >
+              <v-list-item-subtitle
+                >검색하면 기존에 검색한 결과를 지우고 새로
+                검색합니다</v-list-item-subtitle
+              >
+            </v-list-item-content>
+          </v-list-item>
+        </div>
+        <v-card-actions class="justify-center">
+          <v-btn variant="text" @click="isOpenMenu = false">확인</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
 <script lang="ts">
-import { ipcRenderer, remote, shell } from "electron";
+import { app, ipcRenderer, remote, shell } from "electron";
 import Vue from "vue";
-import { Article, Search } from "./types/dcinside";
+import { Article } from "./types/dcinside";
 import { DCWebRequest } from "./types/ipc";
 import fs from "fs";
-import child_process from "child_process";
 
 export default Vue.extend({
   name: "App",
@@ -103,24 +178,16 @@ export default Vue.extend({
         headers: [
           { text: "번호", value: "gall_num" },
           { text: "제목", value: "gall_tit" },
-          { text: "댓글수", value: "none" },
+          { text: "댓글수", value: "reply_num" },
           { text: "작성자", value: "gall_writer" },
           { text: "작성일", value: "gall_date" },
           { text: "조회수", value: "gall_count" },
           { text: "추천", value: "gall_recommend" },
         ],
-        items: [
-          // {
-          //   gall_num: "",
-          //   gall_tit: "",
-          //   none: "",
-          //   gall_writer: "",
-          //   gall_count: "",
-          //   gall_recommend: "",
-          // },
-        ],
+        items: [] as Article[],
       },
       isLoading: false,
+      data_table_loading: false,
       repeat_cnt: "0",
       gallary_id: "",
       keyword: "",
@@ -131,6 +198,8 @@ export default Vue.extend({
       offsetY: 0,
       startX: 0,
       startY: 0,
+      // ====
+      isOpenMenu: false,
     };
   },
   // 처음 실행시 실행되는 함수
@@ -168,7 +237,14 @@ export default Vue.extend({
   },
 
   methods: {
-    startDrag(e: any) {
+    search_keypress(e: any) {
+      if (e.keyCode === 13) {
+        e.preventDefault(); // Ensure it is only this code that runs
+        this.search_btn();
+        // alert("Enter was pressed was presses");
+      }
+    },
+    start_drag(e: any) {
       if (e.button === 0) {
         this.dragging = true;
         this.startX = e.clientX;
@@ -192,13 +268,13 @@ export default Vue.extend({
         }
       }
     },
-    endDrag() {
+    end_drag() {
       this.dragging = false;
     },
-    open_link(gallary_id: string, value: string) {
+    open_link(gallary_id: string, no: string) {
       // 링크 클릭시 해당 게시글로 크롬 브라우저 실행해 이동
-      const url = `https://gall.dcinside.com/board/view/?id=${gallary_id}&no=${value}`;
-      shell.openExternal(url);
+      // ipc 이용하여 일렉트론 서버와 통신
+      ipcRenderer.send("open-link", gallary_id, no);
     },
     string_to_query(selected_items: string): string {
       const dict: any = {
@@ -225,10 +301,15 @@ export default Vue.extend({
       // 현재 창 종료
       const window = remote.getCurrentWindow();
       window.close();
+      // app.exit(0);
+      // ipcRenderer.send('close-me')
     },
     async search_btn() {
       // 여기서 그냥 웹 요청 보내면 CORS가 걸려서 ipc로 백그라운드 node.js 서버에서
       // 웹 요청을 보내고 응답을 받아서 화면에 렌더링하는 방식으로 구현해야 함
+
+      // 검색 버튼 누르면 기존 검색 결과 초기화
+      this.data_table.items = [];
 
       this.isLoading = true;
 
@@ -250,7 +331,7 @@ export default Vue.extend({
       // 백그라운드 서버로부터 응답 받기
       ipcRenderer.on("web-request-response", (event, result: Article[][]) => {
         console.log(result.length);
-        const items: any = [];
+        const items: Article[] = [];
 
         console.time("배열 삽입 시간 : ");
         for (let article of result) {
@@ -259,7 +340,7 @@ export default Vue.extend({
               items.push({
                 gall_num: item.gall_num,
                 gall_tit: item.gall_tit,
-                none: "",
+                reply_num: item.reply_num,
                 gall_writer: item.gall_writer,
                 gall_count: item.gall_count,
                 gall_recommend: item.gall_recommend,
@@ -270,6 +351,7 @@ export default Vue.extend({
         }
         console.timeEnd("배열 삽입 시간 : ");
 
+        // 데이터 바인딩
         this.data_table.items = items;
         // console.log(this.data_table.items);
 
@@ -278,9 +360,18 @@ export default Vue.extend({
 
       ipcRenderer.on("web-request-progress", (event, progress: number) => {
         this.progress = progress;
-        // console.log(progress);
       });
     },
   },
 });
 </script>
+
+<style scoped>
+.v-dialog {
+  border-radius: 0px;
+}
+
+.v-sheet.v-card {
+  border-radius: 0px;
+}
+</style>

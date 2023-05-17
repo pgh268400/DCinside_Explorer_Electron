@@ -1,10 +1,15 @@
 /* eslint-disable prefer-const */
-import axios from "axios";
+import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { Gallary, Search, Page, Article } from "../types/dcinside";
+import { parse } from "node-html-parser";
+import pLimit from "p-limit";
+import { wrapper } from "axios-cookiejar-support";
+import { CookieJar } from "tough-cookie";
 import rateLimit from "axios-rate-limit";
 import * as http from "http";
 import * as https from "https";
 import axiosRetry from "axios-retry";
+import fetch from "node-fetch";
 import * as cliProgress from "cli-progress";
 
 class DCAsyncParser {
@@ -154,19 +159,17 @@ class DCAsyncParser {
   }
 
   private async initialize(): Promise<void> {
-    try {
-      const url = `https://gall.dcinside.com/board/lists?id=${this.id}`;
-      const res = await this.custom_fetch(url);
+    const url = `https://gall.dcinside.com/board/lists?id=${this.id}`;
+    const res = await this.custom_fetch(url);
 
-      this.gallary_type = Gallary.Default;
-
-      if (res.includes("location.replace")) {
-        if (res.includes("mgallery")) {
-          this.gallary_type = Gallary.Miner;
-        }
+    if (res.includes("location.replace")) {
+      if (res.includes("mgallery")) {
+        this.gallary_type = Gallary.Miner;
+      } else {
+        this.gallary_type = Gallary.Mini;
       }
-    } catch (e: any) {
-      this.gallary_type = Gallary.Mini;
+    } else {
+      this.gallary_type = Gallary.Default;
     }
 
     // for debug===============================================
@@ -188,10 +191,6 @@ class DCAsyncParser {
         return 125;
       },
     });
-  }
-
-  public get_garllery_type(): string {
-    return this.gallary_type;
   }
 
   private async get_page_structure(pos: number): Promise<Page> {
@@ -222,11 +221,6 @@ class DCAsyncParser {
     return { pos, start_page, last_page };
   }
 
-  isEmpty(data: string) {
-    if (typeof data == "undefined" || data == null || data == "") return true;
-    else return false;
-  }
-
   private async get_article_from_page(
     pos: number,
     page: number
@@ -253,18 +247,10 @@ class DCAsyncParser {
       // tr 태그 안에 있는 문자열 가져오기
       const gall_num: string = (tr.match(
         /<td class="gall_num".*?>(.*?)<\/td>/s
-      ) || "")[1].trim();
+      ) || [])[1].trim();
 
       let gall_tit: string = (tr.match(/<td class="gall_tit.*?>(.*?)<\/td>/s) ||
-        "")[1].trim();
-
-      let reply_num: string = gall_tit.split('reply_num">[')[1];
-      if (this.isEmpty(reply_num)) {
-        reply_num = "0";
-      } else {
-        reply_num = reply_num.split("]</span>")[0];
-      }
-      // console.log(reply_num);
+        [])[1].trim();
 
       // 쓸데없는 태그 내용들 다 날리기
       gall_tit = gall_tit.split('view-msg ="">')[1].split("</a>")[0].trim();
@@ -277,17 +263,7 @@ class DCAsyncParser {
       regex = /<\/?strong>/gi;
       gall_tit = gall_tit.replace(regex, "");
 
-      // &nbsp, &lt; 등 치환
-      gall_tit = gall_tit
-        .replaceAll("&nbsp;", " ")
-        .replaceAll("&lt;", "<")
-        .replaceAll("&gt;", ">")
-        .replaceAll("&amp;", "&")
-        .replaceAll("&quot;", '"')
-        .replaceAll("&#035;", "#")
-        .replaceAll("&#039;", "'");
-
-      const gall_writer = (tr.match(/data-nick="([^"]*)"/) || "")[1].trim();
+      const gall_writer = (tr.match(/data-nick="([^"]*)"/) || [])[1].trim();
       const gall_date = (tr.match(/<td class="gall_date".*?>(.*?)<\/td>/) ||
         [])[1].trim();
       const gall_count = (tr.match(/<td class="gall_count">(.*?)<\/td>/) ||
@@ -296,7 +272,7 @@ class DCAsyncParser {
       // console.log(tr);
 
       let gall_recommend: any =
-        tr.match(/<td class="gall_recommend">(.*?)<\/td>/) || "";
+        tr.match(/<td class="gall_recommend">(.*?)<\/td>/) || [];
 
       if (gall_recommend.length > 0) {
         gall_recommend = gall_recommend[1].trim();
@@ -312,7 +288,7 @@ class DCAsyncParser {
         gall_date,
         gall_count: parseInt(gall_count),
         gall_recommend: parseInt(gall_recommend),
-        reply_num: parseInt(reply_num),
+        reply_num: 0,
       });
     }
 
@@ -340,14 +316,10 @@ class DCAsyncParser {
 
     let next_pos_obj = res.match(/search_pos=(-?\d+)/);
 
-    let next_pos = 0;
     if (next_pos_obj == null || next_pos_obj.length == 0) {
-      // 다음 검색 위치를 찾을 수 없음 = 글이 10000개 이하인 경우 (0번부터 검색)
-      // throw new Error("다음 검색 위치를 찾을 수 없습니다.");
-      next_pos = 0;
-    } else {
-      next_pos = parseInt(next_pos_obj[1]);
+      throw new Error("다음 검색 위치를 찾을 수 없습니다.");
     }
+    const next_pos = parseInt(next_pos_obj[1]);
 
     const current_pos: number = next_pos - 10000;
     if (isdebug) {
@@ -518,14 +490,13 @@ async function main() {
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
     "야순이",
-    999,
+    100,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {
       //
     },
     true
   );
-
   // console.log(result);
   // const parser = await DCAsyncParser.create("tboi");
   // const result = await parser.search(
