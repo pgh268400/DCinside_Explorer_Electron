@@ -120,7 +120,7 @@
         </v-toolbar>
         <div class="pa-2">
           <v-subheader>프로그램 전체 동작 설정</v-subheader>
-          <v-list-item class="pd-0">
+          <v-list-item>
             <v-list-item-content class="pb-0">
               <v-text-field
                 label="최대 병렬 처리 횟수"
@@ -130,7 +130,32 @@
                 height="auto"
               ></v-text-field>
             </v-list-item-content>
+            <v-tooltip right :max-width="404">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn
+                  fab
+                  small
+                  color="primary"
+                  class="ma-2 mb-7"
+                  elevation="0"
+                  v-bind="attrs"
+                  v-on="on"
+                >
+                  <v-icon dark>mdi-help-circle</v-icon>
+                </v-btn>
+              </template>
+              <span
+                >최대 병렬 처리 횟수를 조정하면 10000개씩 검색하는 디시 검색
+                속도를 늘릴 수 있습니다. 예를 들어서 30으로 설정한 경우
+                10000개의 글을 동시에 30개 단위로 검색합니다. <br />즉,
+                300000개의 글을 한꺼번에 조회하게 되며 이 값을 늘리면 탐색
+                속도는 빨라지지만 그만큼 디시에서 일시적 IP차단을 당할 확률이
+                높아집니다. 기본값은 100이며
+                <u>100 이상 올리는 것은 권장하지 않습니다.</u></span
+              >
+            </v-tooltip>
           </v-list-item>
+
           <v-divider></v-divider>
           <v-subheader>유저 설정</v-subheader>
           <v-list-item>

@@ -517,8 +517,8 @@ async function main() {
   const parser = await DCAsyncParser.create("baseball_new11");
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
-    "야순이",
-    999,
+    "버핏",
+    9999,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {
       //
