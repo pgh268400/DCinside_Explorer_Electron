@@ -323,11 +323,11 @@ export default Vue.extend({
       window.minimize();
     },
     close_window() {
-      // 현재 창 종료
-      const window = remote.getCurrentWindow();
-      window.close();
+      // // 현재 창 종료
+      // const window = remote.getCurrentWindow();
+      // window.close();
       // app.exit(0);
-      // ipcRenderer.send('close-me')
+      ipcRenderer.send("close-me");
     },
     async search_btn() {
       // 여기서 그냥 웹 요청 보내면 CORS가 걸려서 ipc로 백그라운드 node.js 서버에서

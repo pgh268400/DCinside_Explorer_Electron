@@ -383,10 +383,10 @@ class DCAsyncParser {
       tmp_pos_list.push(tmp_pos); // 지워도 됨 디버깅용
       page_tasks.push(this.get_page_structure(tmp_pos));
 
-      tmp_pos += 10000;
       if (Math.abs(tmp_pos) < 10000) {
         break;
       }
+      tmp_pos += 10000;
     }
 
     if (isdebug) {
@@ -515,10 +515,10 @@ export { DCAsyncParser };
 
 // 실제 실행 코드
 async function main() {
-  const parser = await DCAsyncParser.create("baseball_new11");
+  const parser = await DCAsyncParser.create("vr_games_xuq");
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
-    "버핏",
+    "샀어요",
     9999,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {
