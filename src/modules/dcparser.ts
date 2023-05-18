@@ -8,6 +8,7 @@ import axiosRetry from "axios-retry";
 import * as cliProgress from "cli-progress";
 
 class DCAsyncParser {
+  // 비동기 병렬처리 성능 향상을 위해 웹 파싱 시 라이브러리를 사용하지 않는다.
   // ==========================================================
   // 멤버 변수 선언
   private headers = {
