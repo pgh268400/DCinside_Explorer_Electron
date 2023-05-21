@@ -3,14 +3,12 @@
 import { app, protocol, BrowserWindow, ipcMain, shell } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
-
-// import { DCAsyncParser } from "C:/Users/pgh26/Lab/JavaScript/DCParser/dcparser";
-// import { Search } from "C:/Users/pgh26/Lab/JavaScript/DCParser/type";
 import { DCWebRequest } from "./types/ipc";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-const width = 1500;
+const width = 1275 + 400;
+
 const height = 800;
 
 // Scheme must be registered before the app is ready

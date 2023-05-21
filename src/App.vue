@@ -32,10 +32,11 @@
       <v-container>
         <v-row>
           <v-col cols="2">
-            <v-combobox
-              :items="combo_box.items"
-              v-model="combo_box.selected_item"
-            ></v-combobox>
+            <v-select
+              :items="select_box.items"
+              v-model="select_box.selected_item"
+              :menu-props="{ offsetY: true }"
+            ></v-select>
           </v-col>
           <v-col cols="auto" style="width: 110px">
             <v-text-field label="반복 횟수" v-model="repeat_cnt"></v-text-field>
@@ -56,42 +57,29 @@
               color="#3B4890"
               dark
               class="mt-2"
-              @click="search_btn"
-              :loading="isLoading"
+              @click="search_btn_click"
+              :loading="search_btn.isLoading"
             >
               <v-icon>mdi-magnify</v-icon>
             </v-btn>
           </v-col>
         </v-row>
-        <div v-if="isLoading">
+        <div v-if="search_btn.isLoading">
           <v-progress-linear color="primary" :value="progress" :height="25">
             <template v-slot:default="{ value }">
               <strong style="color: white">{{ Math.ceil(value) }}%</strong>
             </template>
           </v-progress-linear>
         </div>
-        <!-- <template>
-          <v-lazy
-            min-height="100"
-            :options="{ threshold: 0.25 }"
-            :style="{ width: '100%' }"
-            transition="fade-transition"
-            :value="false"
-          >
-            <v-data-table
-              v-if="data_table.items"
-              calculate-widths
-              class="items-table-container"
-              dense
-              disable-filtering
-              :headers="data_table.headers"
-              :items="data_table.items"
-              :mobile-breakpoint="0"
-            >
-            </v-data-table>
-          </v-lazy>
-        </template> -->
+        <!-- <v-text-field
+          v-model="filter_text"
+          append-icon="mdi-magnify"
+          label="필터링"
+          single-line
+          hide-details
+        ></v-text-field> -->
         <v-data-table
+          :search="filter_text"
           :footer-props="{
             'items-per-page-text': '페이지 당 보여질 갯수',
             pageText: '{0}-{1} of {2}',
@@ -107,6 +95,9 @@
             </u>
           </template>
           <template slot="no-data"> 데이터가 존재하지 않습니다. </template>
+          <template slot="no-results">
+            필터링할 데이터가 존재하지 않습니다.
+          </template>
         </v-data-table>
       </v-container>
     </v-main>
@@ -182,7 +173,7 @@
 </template>
 
 <script lang="ts">
-import { app, ipcRenderer, remote, shell } from "electron";
+import { ipcRenderer, remote } from "electron";
 import Vue from "vue";
 import { Article } from "./types/dcinside";
 import { DCWebRequest } from "./types/ipc";
@@ -194,7 +185,7 @@ export default Vue.extend({
   data() {
     return {
       title: "DCInside Explorer",
-      combo_box: {
+      select_box: {
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
       },
@@ -209,9 +200,22 @@ export default Vue.extend({
           { text: "조회수", value: "gall_count" },
           { text: "추천", value: "gall_recommend" },
         ],
-        items: [] as Article[],
+        items: [
+          // {
+          //   gall_num: 99999999,
+          //   gall_tit: "1234567890123456789012345678901234567890",
+          //   gall_writer: "ㅇㅇㅇㅇㅇㅇ",
+          //   gall_date: "23/05/15",
+          //   gall_count: 9999,
+          //   gall_recommend: 9999,
+          //   reply_num: 9999,
+          // },
+        ] as Article[],
       },
-      isLoading: false,
+
+      search_btn: {
+        isLoading: false,
+      },
       data_table_loading: false,
       repeat_cnt: "0",
       gallary_id: "",
@@ -225,11 +229,12 @@ export default Vue.extend({
       startY: 0,
       // ====
       isOpenMenu: false,
+      filter_text: "",
     };
   },
   // 처음 실행시 실행되는 함수
   async mounted() {
-    this.combo_box.selected_item = this.combo_box.items[0]; // 첫 번째 아이템으로 기본값 설정
+    this.select_box.selected_item = this.select_box.items[0]; // 첫 번째 아이템으로 기본값 설정
 
     try {
       const data = await fs.promises.readFile("data.json", "utf-8");
@@ -262,21 +267,21 @@ export default Vue.extend({
   },
 
   methods: {
-    search_keypress(e: any) {
-      if (e.keyCode === 13) {
+    search_keypress(e: KeyboardEvent) {
+      if (e.key === "Enter") {
         e.preventDefault(); // Ensure it is only this code that runs
-        this.search_btn();
+        this.search_btn_click();
         // alert("Enter was pressed was presses");
       }
     },
-    start_drag(e: any) {
+    start_drag(e: MouseEvent) {
       if (e.button === 0) {
         this.dragging = true;
         this.startX = e.clientX;
         this.startY = e.clientY;
       }
     },
-    drag(e: any) {
+    drag(e: MouseEvent) {
       if (this.dragging) {
         const x = e.clientX - this.startX;
         const y = e.clientY - this.startY;
@@ -302,20 +307,14 @@ export default Vue.extend({
       ipcRenderer.send("open-link", gallary_id, no);
     },
     string_to_query(selected_items: string): string {
-      const dict: any = {
+      const dic: any = {
         "제목+내용": "search_subject_memo",
         제목: "search_subject",
         내용: "search_memo",
         글쓴이: "search_name",
         댓글: "search_comment",
       };
-      return dict[selected_items];
-    },
-    toggle_drawer() {
-      // 왼쪽에 위치한 네비게이션 열기/닫기
-      console.log("toggle_drawer");
-      // console.log(this.combobox.items);
-      // this.combobox.selected_item = this.combobox.items[1];
+      return dic[selected_items];
     },
     minimize_window() {
       // 현재 창 최소화
@@ -323,34 +322,35 @@ export default Vue.extend({
       window.minimize();
     },
     close_window() {
-      // // 현재 창 종료
+      // 현재 창 종료
       // const window = remote.getCurrentWindow();
       // window.close();
       // app.exit(0);
+      // 확실한 종료 보장을 위해 일렉트론 백그라운드 서버와 IPC 통신으로 종료 요청
       ipcRenderer.send("close-me");
     },
-    async search_btn() {
+    async search_btn_click() {
       // 여기서 그냥 웹 요청 보내면 CORS가 걸려서 ipc로 백그라운드 node.js 서버에서
       // 웹 요청을 보내고 응답을 받아서 화면에 렌더링하는 방식으로 구현해야 함
 
       // 검색 버튼 누르면 기존 검색 결과 초기화
       this.data_table.items = [];
 
-      this.isLoading = true;
+      this.search_btn.isLoading = true;
 
       // 웹 요청 보내기
       ipcRenderer.send("web-request", {
         id: this.gallary_id,
         repeat_cnt: parseInt(this.repeat_cnt),
         keyword: this.keyword,
-        search_type: this.string_to_query(this.combo_box.selected_item),
+        search_type: this.string_to_query(this.select_box.selected_item),
       } as DCWebRequest);
 
       console.log({
         id: this.gallary_id,
         repeat_cnt: parseInt(this.repeat_cnt),
         keyword: this.keyword,
-        search_type: this.string_to_query(this.combo_box.selected_item),
+        search_type: this.string_to_query(this.select_box.selected_item),
       });
 
       // 백그라운드 서버로부터 응답 받기
@@ -380,7 +380,7 @@ export default Vue.extend({
         this.data_table.items = items;
         // console.log(this.data_table.items);
 
-        this.isLoading = false;
+        this.search_btn.isLoading = false;
       });
 
       ipcRenderer.on("web-request-progress", (event, progress: number) => {

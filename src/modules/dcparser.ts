@@ -128,7 +128,7 @@ class DCAsyncParser {
     return result;
   };
 
-  // 바로 순수 response data만 응답하는 커스텀 HTTP 요청
+  // 순수 response data만 응답하는 커스텀 HTTP 요청
   private async custom_fetch(
     url: string,
     headers = this.headers
@@ -396,10 +396,6 @@ class DCAsyncParser {
       console.time("작업 소요 시간");
     }
 
-    // const page_structure = await this.promise_all_progress(page_tasks, (p) => {
-    //   console.log(`작업 수행률 = ${p.toFixed(2)}%`);
-    // });
-
     let page_structure;
     if (isdebug) {
       const bar1 = new cliProgress.SingleBar(
@@ -442,34 +438,12 @@ class DCAsyncParser {
       }
     }
 
-    // const article_tasks: Promise<Article[]>[] = [];
-    // for (let item of page_structure) {
-    //   if (item.status === "fulfilled") {
-    //     for (
-    //       let page = item.value.start_page;
-    //       page <= item.value.last_page;
-    //       page++
-    //     ) {
-    //       article_tasks.push(this.get_article_from_page(item.value.pos, page));
-    //     }
-    //   } else {
-    //     console.log("작업 실패");
-    //   }
-    // }
-
     if (isdebug) {
       console.log("페이지별 글 목록 수집 시작...");
       console.log(`총 ${article_tasks.length}개의 작업을 수행합니다.`);
 
       console.time("작업 소요 시간");
     }
-
-    // const articles = await this.promise_all_progress(
-    //   article_tasks,
-    //   (p: any) => {
-    //     console.log(`작업 수행률 = ${p.toFixed(2)}%`);
-    //   }
-    // );
 
     let articles;
     if (isdebug) {

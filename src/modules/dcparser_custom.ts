@@ -6,9 +6,9 @@ import * as http from "http";
 import * as https from "https";
 import axiosRetry from "axios-retry";
 import * as cliProgress from "cli-progress";
-import fetch, { Response } from "node-fetch";
 
 class DCAsyncParser {
+  // 비동기 병렬처리 성능 향상을 위해 웹 파싱 시 라이브러리를 사용하지 않는다.
   // ==========================================================
   // 멤버 변수 선언
   private headers = {
@@ -17,11 +17,10 @@ class DCAsyncParser {
     Accept:
       "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     Referer: "https://gall.dcinside.com/board/lists/?id=baseball_new11",
-    // "Sec-Fetch-Site": "same-origin",
-    // "Sec-Fetch-Mode": "navigate",
-    // "Sec-Fetch-User": "?1",
-    // "Sec-Fetch-Dest": "document",
-    "Access-Control-Allow-Origin": "*",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-User": "?1",
+    "Sec-Fetch-Dest": "document",
   };
 
   // 동시 요청 제한 횟수
@@ -130,7 +129,10 @@ class DCAsyncParser {
   };
 
   // 바로 순수 response data만 응답하는 커스텀 HTTP 요청
-  private async custom_fetch(url: string, headers = this.headers) {
+  private async custom_fetch(
+    url: string,
+    headers = this.headers
+  ): Promise<string> {
     // 타임아웃과 keepAlive를 설정해야지 연결이 끊기지 않고 TCP Connection을 재활용할 수 있음.
     // 아마 파이썬의 session.get 과 유사한 기능인듯?
     // 다만 디시 서버에서 연결이 타임아웃으로 끊기는건 너무 여러번 요청을 보내서 차단 당했을때임.
@@ -140,45 +142,8 @@ class DCAsyncParser {
 
     // ==========================================================
 
-    // const res = await this.http.get(url, { headers });
-
-    const delay = (ms: number) =>
-      new Promise<void>((resolve) => setTimeout(() => resolve(), ms));
-
-    const retry_fetch = (
-      url: string,
-      fetchOptions = {},
-      retries = 3,
-      retryDelay = 1000,
-      timeout: number
-    ): Promise<Response> => {
-      return new Promise((resolve, reject) => {
-        // check for timeout
-        if (timeout) setTimeout(() => reject("error: timeout"), timeout);
-
-        const wrapper = (n: number) => {
-          fetch(url, fetchOptions)
-            .then((res) => resolve(res))
-            .catch(async (err) => {
-              if (n > 0) {
-                await delay(retryDelay);
-                wrapper(--n);
-              } else {
-                reject(err);
-              }
-            });
-        };
-        wrapper(retries);
-      });
-    };
-
-    // 참고로 async 함수에서 값을 반환하면 Promise로 묶여서 반환되고,
-    // 그냥 프로미스를 반환하면 프로미스가 그대로 반환 됨.
-    const res = await retry_fetch(url, { headers }, 3, 125, 60000);
-    return res.text();
-
-    // const res = await this.http.get(url, { headers });
-    // return await res.data;
+    const res = await this.http.get(url, { headers });
+    return res.data;
 
     // return this.http
     //   .get(url, { headers })
@@ -187,34 +152,33 @@ class DCAsyncParser {
 
     // const res = await fetch(url, { headers });
     // return await res.text();
-
-    // const res = await axios(url, { headers });
-    // // return res.data;
   }
 
   private async initialize(): Promise<void> {
-    const url = `https://gall.dcinside.com/board/lists?id=${this.id}`;
-    const res = await this.custom_fetch(url);
+    try {
+      const url = `https://gall.dcinside.com/board/lists?id=${this.id}`;
+      const res = await this.custom_fetch(url);
 
-    if (res.includes("location.replace")) {
-      if (res.includes("mgallery")) {
-        this.gallary_type = Gallary.Miner;
-      } else {
-        this.gallary_type = Gallary.Mini;
-      }
-    } else {
       this.gallary_type = Gallary.Default;
+
+      if (res.includes("location.replace")) {
+        if (res.includes("mgallery")) {
+          this.gallary_type = Gallary.Miner;
+        }
+      }
+    } catch (e: any) {
+      this.gallary_type = Gallary.Mini;
     }
 
     // for debug===============================================
-    // let output = "";
-    // if (this.gallary_type === Gallary.Default) {
-    //   output = "일반";
-    // } else if (this.gallary_type === Gallary.Miner) {
-    //   output = "마이너";
-    // } else if (this.gallary_type === Gallary.Mini) {
-    //   output = "미니";
-    // }
+    let output = "";
+    if (this.gallary_type === Gallary.Default) {
+      output = "일반";
+    } else if (this.gallary_type === Gallary.Miner) {
+      output = "마이너";
+    } else if (this.gallary_type === Gallary.Mini) {
+      output = "미니";
+    }
     // console.log("갤러리 타입 :", output);
     // ==========================================================
 
@@ -225,6 +189,10 @@ class DCAsyncParser {
         return 125;
       },
     });
+  }
+
+  public get_garllery_type(): string {
+    return this.gallary_type;
   }
 
   private async get_page_structure(pos: number): Promise<Page> {
@@ -241,12 +209,7 @@ class DCAsyncParser {
     let last_page = 1;
 
     if (matches == null || matches.length == 0) {
-      console.log(res);
-      console.log(url);
-      console.log("파싱중 문제 발생");
-      return { pos, start_page, last_page };
-
-      // throw new Error("끝 페이지 파싱에 실패하였습니다.");
+      throw new Error("끝 페이지 파싱에 실패하였습니다.");
     }
 
     if (Math.abs(pos) < 10000) {
@@ -258,6 +221,11 @@ class DCAsyncParser {
     }
 
     return { pos, start_page, last_page };
+  }
+
+  isEmpty(data: string) {
+    if (typeof data == "undefined" || data == null || data == "") return true;
+    else return false;
   }
 
   private async get_article_from_page(
@@ -286,10 +254,18 @@ class DCAsyncParser {
       // tr 태그 안에 있는 문자열 가져오기
       const gall_num: string = (tr.match(
         /<td class="gall_num".*?>(.*?)<\/td>/s
-      ) || [])[1].trim();
+      ) || "")[1].trim();
 
       let gall_tit: string = (tr.match(/<td class="gall_tit.*?>(.*?)<\/td>/s) ||
-        [])[1].trim();
+        "")[1].trim();
+
+      let reply_num: string = gall_tit.split('reply_num">[')[1];
+      if (this.isEmpty(reply_num)) {
+        reply_num = "0";
+      } else {
+        reply_num = reply_num.split("]</span>")[0];
+      }
+      // console.log(reply_num);
 
       // 쓸데없는 태그 내용들 다 날리기
       gall_tit = gall_tit.split('view-msg ="">')[1].split("</a>")[0].trim();
@@ -302,7 +278,17 @@ class DCAsyncParser {
       regex = /<\/?strong>/gi;
       gall_tit = gall_tit.replace(regex, "");
 
-      const gall_writer = (tr.match(/data-nick="([^"]*)"/) || [])[1].trim();
+      // &nbsp, &lt; 등 치환
+      gall_tit = gall_tit
+        .replaceAll("&nbsp;", " ")
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">")
+        .replaceAll("&amp;", "&")
+        .replaceAll("&quot;", '"')
+        .replaceAll("&#035;", "#")
+        .replaceAll("&#039;", "'");
+
+      const gall_writer = (tr.match(/data-nick="([^"]*)"/) || "")[1].trim();
       const gall_date = (tr.match(/<td class="gall_date".*?>(.*?)<\/td>/) ||
         [])[1].trim();
       const gall_count = (tr.match(/<td class="gall_count">(.*?)<\/td>/) ||
@@ -311,7 +297,7 @@ class DCAsyncParser {
       // console.log(tr);
 
       let gall_recommend: any =
-        tr.match(/<td class="gall_recommend">(.*?)<\/td>/) || [];
+        tr.match(/<td class="gall_recommend">(.*?)<\/td>/) || "";
 
       if (gall_recommend.length > 0) {
         gall_recommend = gall_recommend[1].trim();
@@ -327,7 +313,7 @@ class DCAsyncParser {
         gall_date,
         gall_count: parseInt(gall_count),
         gall_recommend: parseInt(gall_recommend),
-        reply_num: 0,
+        reply_num: parseInt(reply_num),
       });
     }
 
@@ -355,10 +341,14 @@ class DCAsyncParser {
 
     let next_pos_obj = res.match(/search_pos=(-?\d+)/);
 
+    let next_pos = 0;
     if (next_pos_obj == null || next_pos_obj.length == 0) {
-      throw new Error("다음 검색 위치를 찾을 수 없습니다.");
+      // 다음 검색 위치를 찾을 수 없음 = 글이 10000개 이하인 경우 (0번부터 검색)
+      // throw new Error("다음 검색 위치를 찾을 수 없습니다.");
+      next_pos = 0;
+    } else {
+      next_pos = parseInt(next_pos_obj[1]);
     }
-    const next_pos = parseInt(next_pos_obj[1]);
 
     const current_pos: number = next_pos - 10000;
     if (isdebug) {
@@ -385,96 +375,139 @@ class DCAsyncParser {
     let tmp_pos = current_pos;
 
     // pos 범위 임시 출력용 리스트
-    // const tmp_pos_list: number[] = [];
+    const tmp_pos_list: number[] = [];
 
-    // const promises = [];
-
-    // console.time("Blocking Test 1");
-    // for (let i = 0; i < next_search_cnt; i++) {
-    //   const promise = this.get_page_structure(tmp_pos)
-    //     .then((item) => {
-    //       return new Promise((resolve) => {
-    //         resolve(item);
-    //       });
-    //     })
-    //     .then((item: any) => {
-    //       const page_promises = [];
-
-    //       for (let page = item.start_page; page <= item.last_page; page++) {
-    //         const page_promise = this.get_article_from_page(item.pos, page);
-    //         page_promises.push(page_promise);
-    //       }
-
-    //       return Promise.all(page_promises);
-    //     });
-
-    //   promises.push(promise);
-
-    //   tmp_pos += 10000;
-    //   if (Math.abs(tmp_pos) < 10000) {
-    //     break;
-    //   }
-    // }
-    // console.timeEnd("Blocking Test 1");
-
-    // console.time("Blocking Test 2");
-    // const result = await this.promise_all_limit_progress(
-    //   100,
-    //   promises.map((p) => () => p),
-    //   (p) => {
-    //     console.log(p);
-    //   }
-    // );
-    // // console.log(result);
-    // console.timeEnd("Blocking Test 2");
-
-    // const result_articles: Article[][] = [];
-
-    // console.time("Blocking Test");
-    // for (let i = 0; i < next_search_cnt; i++) {
-    //   this.get_page_structure(tmp_pos)
-    //     .then((item) => {
-    //       return new Promise((resolve) => {
-    //         resolve(item);
-    //       });
-    //     })
-    //     .then((item: any) => {
-    //       for (let page = item.start_page; page <= item.last_page; page++) {
-    //         this.get_article_from_page(item.pos, page).then((articles) => {
-    //           result_articles.push(articles);
-    //           console.log(articles);
-    //         });
-    //       }
-    //     });
-
-    //   tmp_pos += 10000;
-    //   if (Math.abs(tmp_pos) < 10000) {
-    //     break;
-    //   }
-    // }
-    // console.timeEnd("Blocking Test");
-
-    // console.log("기다립시다");
-    // console.log(result_articles);
-
-    const result: any = [];
+    // 코루틴 작업을 담을 리스트
+    const page_tasks: Promise<Page>[] = [];
     for (let i = 0; i < next_search_cnt; i++) {
-      this.get_page_structure(tmp_pos).then((item) => {
-        for (let page = item.start_page; page <= item.last_page; page++) {
-          this.get_article_from_page(item.pos, page).then((articles) => {
-            // console.log(articles);
-            result.push(articles);
-          });
-        }
-      });
+      tmp_pos_list.push(tmp_pos); // 지워도 됨 디버깅용
+      page_tasks.push(this.get_page_structure(tmp_pos));
 
-      tmp_pos += 10000;
       if (Math.abs(tmp_pos) < 10000) {
         break;
       }
+      tmp_pos += 10000;
     }
 
-    return result;
+    if (isdebug) {
+      console.log(`총 ${page_tasks.length}개의 작업을 수행합니다.`);
+      console.log(tmp_pos_list);
+
+      console.time("작업 소요 시간");
+    }
+
+    // const page_structure = await this.promise_all_progress(page_tasks, (p) => {
+    //   console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+    // });
+
+    let page_structure;
+    if (isdebug) {
+      const bar1 = new cliProgress.SingleBar(
+        {},
+        cliProgress.Presets.shades_classic
+      );
+
+      bar1.start(100, 0);
+
+      page_structure = await this.promise_all_limit_progress(
+        100,
+        page_tasks.map((p) => () => p),
+        (p) => {
+          // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+          bar1.update(p);
+        }
+      );
+
+      bar1.stop();
+    } else {
+      page_structure = await this.promise_all_limit_progress(
+        100,
+        page_tasks.map((p) => () => p),
+        (p) => {
+          progress_call_back(p.toFixed(2));
+          // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+        }
+      );
+    }
+
+    if (isdebug) {
+      console.timeEnd("작업 소요 시간");
+      console.log(page_structure);
+    }
+
+    const article_tasks: Promise<Article[]>[] = [];
+    for (let item of page_structure) {
+      for (let page = item.start_page; page <= item.last_page; page++) {
+        article_tasks.push(this.get_article_from_page(item.pos, page));
+      }
+    }
+
+    // const article_tasks: Promise<Article[]>[] = [];
+    // for (let item of page_structure) {
+    //   if (item.status === "fulfilled") {
+    //     for (
+    //       let page = item.value.start_page;
+    //       page <= item.value.last_page;
+    //       page++
+    //     ) {
+    //       article_tasks.push(this.get_article_from_page(item.value.pos, page));
+    //     }
+    //   } else {
+    //     console.log("작업 실패");
+    //   }
+    // }
+
+    if (isdebug) {
+      console.log("페이지별 글 목록 수집 시작...");
+      console.log(`총 ${article_tasks.length}개의 작업을 수행합니다.`);
+
+      console.time("작업 소요 시간");
+    }
+
+    // const articles = await this.promise_all_progress(
+    //   article_tasks,
+    //   (p: any) => {
+    //     console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+    //   }
+    // );
+
+    let articles;
+    if (isdebug) {
+      const bar2 = new cliProgress.SingleBar(
+        {},
+        cliProgress.Presets.shades_classic
+      );
+
+      bar2.start(100, 0);
+
+      articles = await this.promise_all_limit_progress(
+        100,
+        article_tasks.map((p) => () => p),
+        (p) => {
+          // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+          bar2.update(p);
+        }
+      );
+
+      bar2.stop();
+    } else {
+      articles = await this.promise_all_limit_progress(
+        100,
+        article_tasks.map((p) => () => p),
+        (p) => {
+          // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+          progress_call_back(p.toFixed(2));
+        }
+      );
+    }
+
+    if (isdebug) {
+      console.log(articles);
+      console.log("페이지별 글 목록 수집 완료");
+      console.timeEnd("작업 소요 시간");
+    }
+
+    return articles;
   }
 }
 
@@ -482,17 +515,18 @@ export { DCAsyncParser };
 
 // 실제 실행 코드
 async function main() {
-  const parser = await DCAsyncParser.create("baseball_new11");
+  const parser = await DCAsyncParser.create("vr_games_xuq");
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
-    "야순이",
-    999,
+    "샀어요",
+    9999,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {
       //
     },
     true
   );
+
   // console.log(result);
   // const parser = await DCAsyncParser.create("tboi");
   // const result = await parser.search(
@@ -503,8 +537,8 @@ async function main() {
   //   (p: number) => {},
   //   true
   // );
-  // console.log(result);
-  // console.log(result.length);
+  console.log(result);
+  console.log(result.length);
 }
 
 // 파이썬의 if __name__ == '__main__' 과 동일한 코드
