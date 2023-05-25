@@ -12,11 +12,9 @@
         @mousedown="start_drag"
         @mousemove="drag"
         @mouseup="end_drag"
-        @mouseleave="end_drag"
-      >
+        @mouseleave="end_drag">
         <v-app-bar-nav-icon
-          @click="isOpenMenu = !isOpenMenu"
-        ></v-app-bar-nav-icon>
+          @click="isOpenMenu = !isOpenMenu"></v-app-bar-nav-icon>
         <v-toolbar-title class="pl-1">{{ title }}</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="minimize_window">
@@ -35,11 +33,14 @@
             <v-select
               :items="select_box.items"
               v-model="select_box.selected_item"
-              :menu-props="{ offsetY: true }"
-            ></v-select>
+              :menu-props="{ offsetY: true }"></v-select>
           </v-col>
           <v-col cols="auto" style="width: 110px">
-            <v-text-field label="반복 횟수" v-model="repeat_cnt"></v-text-field>
+            <v-text-field
+              label="반복 횟수"
+              v-model.number="repeat_cnt"
+              type="number"
+              hide-spin-buttons></v-text-field>
           </v-col>
           <v-col cols="2">
             <v-text-field label="갤러리 ID" v-model="gallary_id"></v-text-field>
@@ -49,8 +50,7 @@
               label="검색어"
               v-model="keyword"
               :spellcheck="false"
-              @keypress="search_keypress"
-            ></v-text-field>
+              @keypress="search_keypress"></v-text-field>
           </v-col>
           <v-col>
             <v-btn
@@ -58,8 +58,7 @@
               dark
               class="mt-2"
               @click="search_btn_click"
-              :loading="search_btn.isLoading"
-            >
+              :loading="search_btn.isLoading">
               <v-icon>mdi-magnify</v-icon>
             </v-btn>
           </v-col>
@@ -85,8 +84,7 @@
             pageText: '{0}-{1} of {2}',
           }"
           :headers="data_table.headers"
-          :items="data_table.items"
-        >
+          :items="data_table.items">
           <template v-slot:[`item.gall_num`]="{ value }">
             <u>
               <a @click="open_link(gallary_id, value)">
@@ -94,7 +92,7 @@
               </a>
             </u>
           </template>
-          <template slot="no-data"> 데이터가 존재하지 않습니다. </template>
+          <template slot="no-data">데이터가 존재하지 않습니다.</template>
           <template slot="no-results">
             필터링할 데이터가 존재하지 않습니다.
           </template>
@@ -102,7 +100,7 @@
       </v-container>
     </v-main>
     <!-- 다이얼 로그 -->
-    <v-dialog v-model="isOpenMenu" width="500px" class="rounded-0">
+    <v-dialog v-model="isOpenMenu" width="500px">
       <v-card>
         <v-toolbar density="compact" color="#3B4890" dense>
           <v-toolbar-title>
@@ -117,9 +115,8 @@
                 label="최대 병렬 처리 횟수"
                 outlined
                 clearable
-                value="100"
-                height="auto"
-              ></v-text-field>
+                v-model="settings.program_entire_settings.max_parallel"
+                height="auto"></v-text-field>
             </v-list-item-content>
             <v-tooltip right :max-width="404">
               <template v-slot:activator="{ on, attrs }">
@@ -130,37 +127,38 @@
                   class="ma-2 mb-7"
                   elevation="0"
                   v-bind="attrs"
-                  v-on="on"
-                >
+                  v-on="on">
                   <v-icon dark>mdi-help-circle</v-icon>
                 </v-btn>
               </template>
-              <span
-                >최대 병렬 처리 횟수를 조정하면 10000개씩 검색하는 디시 검색
+              <span>
+                최대 병렬 처리 횟수를 조정하면 10000개씩 검색하는 디시 검색
                 속도를 늘릴 수 있습니다. 예를 들어서 30으로 설정한 경우
-                10000개의 글을 동시에 30개 단위로 검색합니다. <br />즉,
-                300000개의 글을 한꺼번에 조회하게 되며 이 값을 늘리면 탐색
+                10000개의 글을 동시에 30개 단위로 검색합니다.
+                <br />
+                즉, 300000개의 글을 한꺼번에 조회하게 되며 이 값을 늘리면 탐색
                 속도는 빨라지지만 그만큼 디시에서 일시적 IP차단을 당할 확률이
                 높아집니다. 기본값은 100이며
-                <u>100 이상 올리는 것은 권장하지 않습니다.</u></span
-              >
+                <u>100 이상 올리는 것은 권장하지 않습니다.</u>
+              </span>
             </v-tooltip>
           </v-list-item>
-
           <v-divider></v-divider>
           <v-subheader>유저 설정</v-subheader>
           <v-list-item>
             <v-list-item-action>
-              <v-checkbox></v-checkbox>
+              <v-checkbox
+                v-model="
+                  settings.user_preferences.clear_data_on_search
+                "></v-checkbox>
             </v-list-item-action>
             <v-list-item-content>
-              <v-list-item-title
-                >검색 시 기존 검색 결과 초기화</v-list-item-title
-              >
-              <v-list-item-subtitle
-                >검색하면 기존에 검색한 결과를 지우고 새로
-                검색합니다</v-list-item-subtitle
-              >
+              <v-list-item-title>
+                검색 시 기존 검색 결과 초기화
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                검색하면 기존에 검색한 결과를 지우고 새로 검색합니다
+              </v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
         </div>
@@ -177,7 +175,9 @@ import { ipcRenderer, remote } from "electron";
 import Vue from "vue";
 import { Article } from "./types/dcinside";
 import { DCWebRequest } from "./types/ipc";
+
 import fs from "fs";
+import { SaveData } from "./types/view";
 
 export default Vue.extend({
   name: "App",
@@ -217,7 +217,7 @@ export default Vue.extend({
         isLoading: false,
       },
       data_table_loading: false,
-      repeat_cnt: "0",
+      repeat_cnt: 0,
       gallary_id: "",
       keyword: "",
       progress: 0,
@@ -230,6 +230,14 @@ export default Vue.extend({
       // ====
       isOpenMenu: false,
       filter_text: "",
+      settings: {
+        program_entire_settings: {
+          max_parallel: 100,
+        },
+        user_preferences: {
+          clear_data_on_search: true,
+        },
+      },
     };
   },
   // 처음 실행시 실행되는 함수
@@ -238,10 +246,12 @@ export default Vue.extend({
 
     try {
       const data = await fs.promises.readFile("data.json", "utf-8");
-      const parsedData = JSON.parse(data);
-      this.repeat_cnt = parsedData.repeat_cnt;
-      this.gallary_id = parsedData.gallary_id;
-      this.keyword = parsedData.keyword;
+      const parsed_data: SaveData = JSON.parse(data);
+      this.repeat_cnt = parsed_data.repeat_cnt;
+      this.gallary_id = parsed_data.gallary_id;
+      this.keyword = parsed_data.keyword;
+      this.select_box.selected_item = parsed_data.search_type;
+      this.settings = parsed_data.settings;
       console.log("Data loaded successfully");
     } catch (err) {
       console.error(err);
@@ -251,11 +261,20 @@ export default Vue.extend({
   // 종료 직전에 실행되는 함수
   async beforeDestroy() {
     // 종료 직전에 프로그램의 입력 데이터를 저장한다.
-    const data = {
-      // isLoading: this.isLoading,
+    const data: SaveData = {
+      search_type: this.select_box.selected_item,
       repeat_cnt: this.repeat_cnt,
       gallary_id: this.gallary_id,
       keyword: this.keyword,
+      settings: {
+        program_entire_settings: {
+          max_parallel: this.settings.program_entire_settings.max_parallel,
+        },
+        user_preferences: {
+          clear_data_on_search:
+            this.settings.user_preferences.clear_data_on_search,
+        },
+      },
     };
 
     try {
@@ -338,17 +357,19 @@ export default Vue.extend({
 
       this.search_btn.isLoading = true;
 
+      console.log(typeof this.repeat_cnt);
+
       // 웹 요청 보내기
       ipcRenderer.send("web-request", {
         id: this.gallary_id,
-        repeat_cnt: parseInt(this.repeat_cnt),
+        repeat_cnt: this.repeat_cnt,
         keyword: this.keyword,
         search_type: this.string_to_query(this.select_box.selected_item),
       } as DCWebRequest);
 
       console.log({
         id: this.gallary_id,
-        repeat_cnt: parseInt(this.repeat_cnt),
+        repeat_cnt: this.repeat_cnt,
         keyword: this.keyword,
         search_type: this.string_to_query(this.select_box.selected_item),
       });
@@ -392,10 +413,6 @@ export default Vue.extend({
 </script>
 
 <style scoped>
-.v-dialog {
-  border-radius: 0px;
-}
-
 .v-sheet.v-card {
   border-radius: 0px;
 }

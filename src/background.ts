@@ -99,7 +99,7 @@ app.on("ready", async () => {
         }
       );
 
-      await fs.promises.writeFile("result.json", JSON.stringify(result));
+      // await fs.promises.writeFile("result.json", JSON.stringify(result));
       event.sender.send("web-request-response", result);
     } catch (e: any) {
       console.error(e);

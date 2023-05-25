@@ -330,7 +330,7 @@ class DCAsyncParser {
     // 객체 변수에 검색에 관련 정보를 기억시킨다.
     // 매번 메서드 매개변수에 넘기는게 번거롭기 때문
     this.search_type = search_type;
-    this.keyword = keyword;
+    this.keyword = encodeURIComponent(keyword);
 
     // 제일 처음 검색 페이지에 요청을 던져서 글 갯수 (검색 위치) 를 파악한다.
     const url = `https://gall.dcinside.com/${this.gallary_type}board/lists/?id=${this.id}&s_type=${this.search_type}&s_keyword=${this.keyword};`;
