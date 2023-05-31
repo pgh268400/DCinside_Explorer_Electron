@@ -170,14 +170,14 @@ class DCAsyncParser {
     }
 
     // for debug===============================================
-    let output = "";
-    if (this.gallary_type === Gallary.Default) {
-      output = "일반";
-    } else if (this.gallary_type === Gallary.Miner) {
-      output = "마이너";
-    } else if (this.gallary_type === Gallary.Mini) {
-      output = "미니";
-    }
+    // let output = "";
+    // if (this.gallary_type === Gallary.Default) {
+    //   output = "일반";
+    // } else if (this.gallary_type === Gallary.Miner) {
+    //   output = "마이너";
+    // } else if (this.gallary_type === Gallary.Mini) {
+    //   output = "미니";
+    // }
     // console.log("갤러리 타입 :", output);
     // ==========================================================
 
@@ -222,7 +222,8 @@ class DCAsyncParser {
     return { pos, start_page, last_page };
   }
 
-  isEmpty(data: string) {
+  // 문자열이 비어있는지 확인하는 함수
+  private isEmpty(data: string) {
     if (typeof data == "undefined" || data == null || data == "") return true;
     else return false;
   }
@@ -419,7 +420,7 @@ class DCAsyncParser {
         100,
         page_tasks.map((p) => () => p),
         (p) => {
-          progress_call_back(p.toFixed(2));
+          progress_call_back(p.toFixed(2), "페이지 구조를 수집중입니다...");
           // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
         }
       );
@@ -469,7 +470,10 @@ class DCAsyncParser {
         article_tasks.map((p) => () => p),
         (p) => {
           // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
-          progress_call_back(p.toFixed(2));
+          progress_call_back(
+            p.toFixed(2),
+            "페이지별 글 목록을 수집중입니다..."
+          );
         }
       );
     }

@@ -63,12 +63,19 @@
             </v-btn>
           </v-col>
         </v-row>
+        <!-- 검색 중에만 프로그래스바, 설명 표시 -->
         <div v-if="search_btn.isLoading">
-          <v-progress-linear color="primary" :value="progress" :height="25">
+          <v-progress-linear
+            color="primary"
+            :value="progress_value"
+            :height="25">
             <template v-slot:default="{ value }">
-              <strong style="color: white">{{ Math.ceil(value) }}%</strong>
+              <strong style="color: white">{{ value }}%</strong>
             </template>
           </v-progress-linear>
+          <div class="text-center" style="font-size: 0.875rem">
+            {{ loading_text_data }}
+          </div>
         </div>
         <!-- <v-text-field
           v-model="filter_text"
@@ -138,8 +145,10 @@
                 <br />
                 즉, 300000개의 글을 한꺼번에 조회하게 되며 이 값을 늘리면 탐색
                 속도는 빨라지지만 그만큼 디시에서 일시적 IP차단을 당할 확률이
-                높아집니다. 기본값은 100이며
+                높아집니다.
                 <u>100 이상 올리는 것은 권장하지 않습니다.</u>
+                <br />
+                <b>기본값 : 100</b>
               </span>
             </v-tooltip>
           </v-list-item>
@@ -220,7 +229,8 @@ export default Vue.extend({
       repeat_cnt: 0,
       gallary_id: "",
       keyword: "",
-      progress: 0,
+      progress_value: 0,
+      loading_text_data: "",
       // ====
       dragging: false,
       offsetX: 0,
@@ -353,7 +363,9 @@ export default Vue.extend({
       // 웹 요청을 보내고 응답을 받아서 화면에 렌더링하는 방식으로 구현해야 함
 
       // 검색 버튼 누르면 기존 검색 결과 초기화
-      this.data_table.items = [];
+      if (this.settings.user_preferences.clear_data_on_search) {
+        this.data_table.items = [];
+      }
 
       this.search_btn.isLoading = true;
 
@@ -404,9 +416,13 @@ export default Vue.extend({
         this.search_btn.isLoading = false;
       });
 
-      ipcRenderer.on("web-request-progress", (event, progress: number) => {
-        this.progress = progress;
-      });
+      ipcRenderer.on(
+        "web-request-progress",
+        (event, progress: number, status: string) => {
+          this.progress_value = progress;
+          this.loading_text_data = status;
+        }
+      );
     },
   },
 });

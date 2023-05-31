@@ -94,8 +94,8 @@ app.on("ready", async () => {
         search_type,
         keyword,
         repeat_cnt,
-        (progress: number) => {
-          event.sender.send("web-request-progress", progress);
+        (progress: number, status: string) => {
+          event.sender.send("web-request-progress", progress, status);
         }
       );
 
