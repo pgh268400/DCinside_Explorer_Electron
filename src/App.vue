@@ -6,7 +6,7 @@
     <div style="user-select: none">
       <v-app-bar
         app
-        color="#3B4890"
+        :color="theme_color"
         id="appbar"
         dark
         @mousedown="start_drag"
@@ -54,7 +54,7 @@
           </v-col>
           <v-col>
             <v-btn
-              color="#3B4890"
+              :color="theme_color"
               dark
               class="mt-2"
               @click="search_btn_click"
@@ -85,6 +85,7 @@
           hide-details
         ></v-text-field> -->
         <v-data-table
+          style="position: relative"
           :search="filter_text"
           :footer-props="{
             'items-per-page-text': '페이지 당 보여질 갯수',
@@ -103,13 +104,38 @@
           <template slot="no-results">
             필터링할 데이터가 존재하지 않습니다.
           </template>
+
+          <!-- v-lazy 이용하여 렉 줄이기, 근데 전체 아이템을 로딩하면 렉걸리는건 똑같음 -->
+          <!-- <template v-slot:item="{ item }">
+            <v-lazy tag="tr" style="height: 25px">
+              <div style="display: contents">
+                <td
+                  v-for="header of data_table.headers"
+                  :key="header.value"
+                  class="text-left">
+                  {{ item[header.value] }}
+                </td>
+              </div>
+            </v-lazy>
+          </template> -->
+
+          <!-- position: relative &  position: absolute 활용하여 v-data-table 왼쪽에 요소 삽입하기 -->
+          <!-- <template slot="footer">
+            <v-btn
+              rounded
+              style="position: absolute; left: 10px; bottom: 10px"
+              :color="theme_color"
+              class="white--text">
+              갤러리 검색 모드
+            </v-btn>
+          </template> -->
         </v-data-table>
       </v-container>
     </v-main>
     <!-- 다이얼 로그 -->
     <v-dialog v-model="isOpenMenu" width="500px">
       <v-card>
-        <v-toolbar density="compact" color="#3B4890" dense>
+        <v-toolbar density="compact" :color="theme_color" dense>
           <v-toolbar-title>
             <span style="color: white">Settings</span>
           </v-toolbar-title>
@@ -194,6 +220,7 @@ export default Vue.extend({
   data() {
     return {
       title: "DCInside Explorer",
+      theme_color: "#3B4890",
       select_box: {
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
