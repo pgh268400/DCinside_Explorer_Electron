@@ -17,6 +17,7 @@
           @click="isOpenMenu = !isOpenMenu"></v-app-bar-nav-icon>
         <v-toolbar-title class="pl-1">{{ title }}</v-toolbar-title>
         <v-spacer></v-spacer>
+
         <v-btn icon @click="minimize_window">
           <v-icon>mdi-window-minimize</v-icon>
         </v-btn>
@@ -84,52 +85,71 @@
           single-line
           hide-details
         ></v-text-field> -->
-        <v-data-table
-          style="position: relative"
-          :search="filter_text"
-          :footer-props="{
-            'items-per-page-text': '페이지 당 보여질 갯수',
-            pageText: '{0}-{1} of {2}',
-          }"
-          :headers="data_table.headers"
-          :items="data_table.items">
-          <template v-slot:[`item.gall_num`]="{ value }">
-            <u>
-              <a @click="open_link(gallary_id, value)">
-                {{ value }}
-              </a>
-            </u>
-          </template>
-          <template slot="no-data">데이터가 존재하지 않습니다.</template>
-          <template slot="no-results">
-            필터링할 데이터가 존재하지 않습니다.
-          </template>
 
-          <!-- v-lazy 이용하여 렉 줄이기, 근데 전체 아이템을 로딩하면 렉걸리는건 똑같음 -->
-          <!-- <template v-slot:item="{ item }">
-            <v-lazy tag="tr" style="height: 25px">
-              <div style="display: contents">
-                <td
-                  v-for="header of data_table.headers"
-                  :key="header.value"
-                  class="text-left">
-                  {{ item[header.value] }}
-                </td>
-              </div>
-            </v-lazy>
-          </template> -->
-
-          <!-- position: relative &  position: absolute 활용하여 v-data-table 왼쪽에 요소 삽입하기 -->
-          <!-- <template slot="footer">
-            <v-btn
-              rounded
-              style="position: absolute; left: 10px; bottom: 10px"
-              :color="theme_color"
-              class="white--text">
-              갤러리 검색 모드
+        <template>
+          <ag-grid-vue
+            style="height: 537px"
+            class="ag-theme-material"
+            :defaultColDef="ag_grid_vue.default_columns_def"
+            :columnDefs="ag_grid_vue.columns"
+            :rowData="ag_grid_vue.rows"
+            :pagination="ag_grid_vue.ispagination"
+            :localeText="ag_grid_vue.locale_text"
+            :suppressPaginationPanel="true"
+            :paginationPageSize="ag_grid_vue.pagination_size"
+            @grid-ready="onGridReady"
+            @grid-size-changed="onGridSizeChanged"
+            @pagination-changed="onPaginationChanged"
+            suppressBrowserResizeObserver="true"></ag-grid-vue>
+        </template>
+        <v-row class="pagination-bar" align="center" justify="end">
+          <v-col cols="auto">
+            <div style="height: 25px">페이지 당 보여질 갯수</div>
+          </v-col>
+          <v-col cols="auto" style="width: 80px">
+            <v-select
+              v-model="page_select_box.selected_item"
+              :items="page_select_box.items"
+              class="custom-select"
+              @change="onPageSizeChange"
+              :menu-props="{ top: true, offsetY: true }"></v-select>
+          </v-col>
+          <!-- <v-col cols="auto">
+            <span>
+              총
+              <b>{{ ag_grid_vue.total_page }}</b>
+              페이지 중
+              <b>{{ ag_grid_vue.current_page }}</b>
+              페이지
+            </span>
+          </v-col> -->
+          <v-col cols="auto" v-if="ag_grid_vue.total_page">
+            {{ ag_grid_vue.start_page_idx }} - {{ ag_grid_vue.end_page_idx }} /
+            {{ ag_grid_vue.total_item_cnt }}
+          </v-col>
+          <v-col cols="auto">
+            <v-btn icon @click="first_page">
+              <v-icon>mdi-page-first</v-icon>
             </v-btn>
-          </template> -->
-        </v-data-table>
+            <v-btn icon @click="prev_page">
+              <v-icon>mdi-chevron-left</v-icon>
+            </v-btn>
+            <span v-if="ag_grid_vue.total_page">
+              총
+              <b>{{ ag_grid_vue.total_page }}</b>
+              페이지 중
+              <b>{{ ag_grid_vue.current_page }}</b>
+              페이지
+            </span>
+
+            <v-btn icon @click="next_page">
+              <v-icon>mdi-chevron-right</v-icon>
+            </v-btn>
+            <v-btn icon @click="last_page">
+              <v-icon>mdi-page-last</v-icon>
+            </v-btn>
+          </v-col>
+        </v-row>
       </v-container>
     </v-main>
     <!-- 다이얼 로그 -->
@@ -213,10 +233,14 @@ import { DCWebRequest } from "./types/ipc";
 
 import fs from "fs";
 import { SaveData } from "./types/view";
+import { AgGridVue } from "ag-grid-vue";
+import CustomLinkRenderer from "./components/CustomLinkRenderer.vue";
+import AG_GRID_LOCALE_EN from "./locales/locale.en";
+import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
+import { Nullable } from "./types/default";
 
 export default Vue.extend({
   name: "App",
-
   data() {
     return {
       title: "DCInside Explorer",
@@ -225,6 +249,47 @@ export default Vue.extend({
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
       },
+      page_select_box: {
+        items: ["10", "20", "30", "40", "50", "모두"],
+        selected_item: "",
+      },
+
+      gallary_id: "",
+      // ag_grid_vue: {
+      //   // ag_grid_vue 의 모든 Column 에 기본 적용되는 옵션
+      //   default_columns_def: {
+      //     sortable: true,
+      //     resizable: true,
+      //     cellStyle: { fontSize: "0.875rem" },
+      //   },
+      //   columns: [
+      //     {
+      //       field: "번호",
+      //       width: 90,
+      //       cellRenderer: "CustomLinkRenderer",
+      //       cellRendererParams: {},
+      //     },
+      //     { field: "제목", flex: 1 },
+      //     { field: "댓글수", width: 70 },
+      //     { field: "작성자", width: 100 },
+      //     { field: "작성일", width: 70 },
+      //     { field: "조회수", width: 70 },
+      //     { field: "추천", width: 70 },
+      //   ],
+      //   rows: [
+      //     // { 열1: "값1", 열2: "값2", 열3: 값3 },
+      //   ],
+      //   locale_text: AG_GRID_LOCALE_EN,
+      //   grid_api: null as Nullable<GridApi>,
+      //   grid_column_api: null as Nullable<ColumnApi>,
+      //   current_page: null as Nullable<number>,
+      //   total_page: null as Nullable<number>,
+      //   start_page_idx: null as Nullable<number>,
+      //   end_page_idx: null as Nullable<number>,
+      //   total_item_cnt: null as Nullable<number>,
+      //   pagination_size: 10,
+      //   ispagination: true,
+      // },
 
       data_table: {
         headers: [
@@ -254,7 +319,7 @@ export default Vue.extend({
       },
       data_table_loading: false,
       repeat_cnt: 0,
-      gallary_id: "",
+
       keyword: "",
       progress_value: 0,
       loading_text_data: "",
@@ -277,9 +342,17 @@ export default Vue.extend({
       },
     };
   },
+  components: {
+    AgGridVue,
+    // eslint-disable-next-line vue/no-unused-components
+    CustomLinkRenderer,
+  },
+
   // 처음 실행시 실행되는 함수
   async mounted() {
-    this.select_box.selected_item = this.select_box.items[0]; // 첫 번째 아이템으로 기본값 설정
+    // 첫 번째 아이템으로 기본값 설정 (v-select)
+    this.select_box.selected_item = this.select_box.items[0];
+    this.page_select_box.selected_item = this.page_select_box.items[0];
 
     try {
       const data = await fs.promises.readFile("data.json", "utf-8");
@@ -323,6 +396,64 @@ export default Vue.extend({
   },
 
   methods: {
+    onPageSizeChange() {
+      if (this.page_select_box.selected_item != "모두") {
+        this.ag_grid_vue.ispagination = true;
+        this.ag_grid_vue.pagination_size = parseInt(
+          this.page_select_box.selected_item
+        );
+      } else {
+        this.ag_grid_vue.ispagination = false;
+      }
+    },
+    onPaginationChanged() {
+      if (this.ag_grid_vue.grid_api) {
+        // 현재 페이지가 0이 아닐때만 렌더링
+        this.ag_grid_vue.current_page =
+          this.ag_grid_vue.grid_api.paginationGetCurrentPage() + 1;
+        this.ag_grid_vue.total_page =
+          this.ag_grid_vue.grid_api.paginationGetTotalPages();
+
+        this.ag_grid_vue.total_item_cnt =
+          this.ag_grid_vue.grid_api.getDisplayedRowCount();
+
+        const row_count = this.ag_grid_vue.total_item_cnt;
+        const last_grid_idx = row_count - 1;
+        const current_page = this.ag_grid_vue.current_page;
+        const page_size = this.ag_grid_vue.grid_api.paginationGetPageSize();
+        let start_page_idx = (current_page - 1) * page_size;
+        let end_page_idx = current_page * page_size - 1;
+
+        if (end_page_idx > last_grid_idx) {
+          end_page_idx = last_grid_idx;
+        }
+
+        this.ag_grid_vue.start_page_idx = start_page_idx + 1;
+        this.ag_grid_vue.end_page_idx = end_page_idx + 1;
+      }
+    },
+    first_page() {
+      this.ag_grid_vue.grid_api?.paginationGoToFirstPage();
+    },
+    last_page() {
+      this.ag_grid_vue.grid_api?.paginationGoToLastPage();
+    },
+    prev_page() {
+      this.ag_grid_vue.grid_api?.paginationGoToPreviousPage();
+    },
+    next_page() {
+      this.ag_grid_vue.grid_api?.paginationGoToNextPage();
+    },
+    onGridSizeChanged(params: any) {
+      // params.api.sizeColumnsToFit();
+    },
+    onGridReady(params: GridReadyEvent) {
+      // console.log("ready");
+      this.ag_grid_vue.grid_api = params.api;
+      this.ag_grid_vue.grid_column_api = params.columnApi;
+
+      // params.api.sizeColumnsToFit(); // 열 너비 자동 조절
+    },
     search_keypress(e: KeyboardEvent) {
       if (e.key === "Enter") {
         e.preventDefault(); // Ensure it is only this code that runs
@@ -391,7 +522,8 @@ export default Vue.extend({
 
       // 검색 버튼 누르면 기존 검색 결과 초기화
       if (this.settings.user_preferences.clear_data_on_search) {
-        this.data_table.items = [];
+        // this.data_table.items = [];
+        this.ag_grid_vue.rows = [];
       }
 
       this.search_btn.isLoading = true;
@@ -416,28 +548,30 @@ export default Vue.extend({
       // 백그라운드 서버로부터 응답 받기
       ipcRenderer.on("web-request-response", (event, result: Article[][]) => {
         console.log(result.length);
-        const items: Article[] = [];
+        const items: any = [];
 
         console.time("배열 삽입 시간 : ");
         for (let article of result) {
           if (article.length > 0) {
             for (let item of article) {
               items.push({
-                gall_num: item.gall_num,
-                gall_tit: item.gall_tit,
-                reply_num: item.reply_num,
-                gall_writer: item.gall_writer,
-                gall_count: item.gall_count,
-                gall_recommend: item.gall_recommend,
-                gall_date: item.gall_date,
+                번호: item.gall_num,
+                제목: item.gall_tit,
+                댓글수: item.reply_num,
+                작성자: item.gall_writer,
+                조회수: item.gall_count,
+                추천: item.gall_recommend,
+                작성일: item.gall_date,
               });
             }
           }
         }
+
         console.timeEnd("배열 삽입 시간 : ");
 
         // 데이터 바인딩
-        this.data_table.items = items;
+        // this.data_table.items = items;
+        this.ag_grid_vue.rows = items;
         // console.log(this.data_table.items);
 
         this.search_btn.isLoading = false;
@@ -452,11 +586,80 @@ export default Vue.extend({
       );
     },
   },
+  computed: {
+    isRenderPage() {
+      return false;
+    },
+    ag_grid_vue() {
+      return {
+        // ag_grid_vue 의 모든 Column 에 기본 적용되는 옵션
+        default_columns_def: {
+          sortable: true,
+          resizable: true,
+          cellStyle: { fontSize: "0.875rem" },
+        },
+        columns: [
+          {
+            field: "번호",
+            width: 90,
+            cellRenderer: "CustomLinkRenderer",
+            cellRendererParams: {
+              gallary_id: () => {
+                // 화살표 함수를 사용해 this scope를 상위로 유지해야함.
+                // 씨이발 좆같은 JS
+                return this.gallary_id;
+              },
+            },
+          },
+          { field: "제목", flex: 1 },
+          { field: "댓글수", width: 70 },
+          { field: "작성자", width: 100 },
+          { field: "작성일", width: 70 },
+          { field: "조회수", width: 70 },
+          { field: "추천", width: 70 },
+        ],
+        rows: [
+          // { 열1: "값1", 열2: "값2", 열3: 값3 },
+        ],
+        locale_text: AG_GRID_LOCALE_EN,
+        grid_api: null as Nullable<GridApi>,
+        grid_column_api: null as Nullable<ColumnApi>,
+        current_page: null as Nullable<number>,
+        total_page: null as Nullable<number>,
+        start_page_idx: null as Nullable<number>,
+        end_page_idx: null as Nullable<number>,
+        total_item_cnt: null as Nullable<number>,
+        pagination_size: 10,
+        ispagination: true,
+      };
+    },
+  },
 });
 </script>
+
+<style lang="scss">
+@import "~ag-grid-community/styles/ag-grid.css";
+// @import "~ag-grid-community/styles/ag-theme-alpine.css";
+@import "~ag-grid-community/styles/ag-theme-material.css";
+</style>
 
 <style scoped>
 .v-sheet.v-card {
   border-radius: 0px;
+}
+
+.ag-theme-material {
+  --ag-cell-horizontal-padding: 16px;
+  border-bottom: none;
+}
+
+.pagination-bar {
+  font-size: 0.75rem;
+  margin-top: -25px;
+  justify-content: flex-end;
+}
+
+.custom-select {
+  font-size: 0.75rem;
 }
 </style>
