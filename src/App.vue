@@ -135,10 +135,16 @@
               페이지
             </span>
 
-            <v-btn icon @click="next_page" :disabled="isLastPage">
+            <v-btn
+              icon
+              @click="next_page"
+              :disabled="isLastPage && !search_btn.isLoading">
               <v-icon>mdi-chevron-right</v-icon>
             </v-btn>
-            <v-btn icon @click="last_page" :disabled="isLastPage">
+            <v-btn
+              icon
+              @click="last_page"
+              :disabled="isLastPage && !search_btn.isLoading">
               <v-icon>mdi-page-last</v-icon>
             </v-btn>
           </v-col>
@@ -263,12 +269,29 @@ export default Vue.extend({
             width: 90,
             cellRenderer: "CustomLinkRenderer",
             cellRendererParams: "",
+            // filter: "agNumberColumnFilter",
           },
           { field: "제목", flex: 1, filter: "agTextColumnFilter" },
-          { field: "댓글수", width: 70 },
-          { field: "작성자", width: 100 },
-          { field: "작성일", width: 70 },
-          { field: "조회수", width: 70 },
+          {
+            field: "댓글수",
+            width: 70,
+            // filter: "agNumberColumnFilter"
+          },
+          {
+            field: "작성자",
+            width: 100,
+            // filter: "agTextColumnFilter"
+          },
+          {
+            field: "작성일",
+            width: 70,
+            // filter: "agTextColumnFilter"
+          },
+          {
+            field: "조회수",
+            width: 70,
+            // filter: "agNumberColumnFilter"
+          },
           { field: "추천", width: 80, filter: "agNumberColumnFilter" },
         ],
         rows: [
