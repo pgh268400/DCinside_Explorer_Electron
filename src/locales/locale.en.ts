@@ -10,26 +10,26 @@ const AG_GRID_LOCALE_EN: any = {
 
   // Number Filter & Text Filter
   filterOoo: "Filter...",
-  equals: "Equals",
-  notEqual: "Not equal",
-  blank: "Blank",
-  notBlank: "Not blank",
+  equals: "동일함",
+  notEqual: "동일하지 않음",
+  blank: "비어 있음",
+  notBlank: "비어있지 않음",
   empty: "Choose One",
 
   // Number Filter
-  lessThan: "Less than",
-  greaterThan: "Greater than",
-  lessThanOrEqual: "Less than or equal",
-  greaterThanOrEqual: "Greater than or equal",
-  inRange: "In range",
+  lessThan: "보다 작음",
+  greaterThan: "보다 큼",
+  lessThanOrEqual: "보다 작거나 같음",
+  greaterThanOrEqual: "보다 크거나 같음",
+  inRange: "범위 안에서",
   inRangeStart: "from",
   inRangeEnd: "to",
 
   // Text Filter
-  contains: "Contains",
-  notContains: "Not contains",
-  startsWith: "Starts with",
-  endsWith: "Ends with",
+  contains: "포함",
+  notContains: "포함하지 않음",
+  startsWith: "로 시작함",
+  endsWith: "로 끝남",
 
   // Date Filter
   dateFormatOoo: "yyyy-mm-dd",

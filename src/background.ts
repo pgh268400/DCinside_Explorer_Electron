@@ -9,7 +9,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 
 const width = 1275 + 400;
 
-const height = 800;
+const height = 840;
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([

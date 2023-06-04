@@ -9,13 +9,21 @@ export default {
   data() {
     return {
       number: "",
-      gallary_id: "",
     };
   },
   beforeMount() {
     this.value = this.params.value;
-    this.gallary_id = this.params.gallary_id;
-    console.log(this.gallary_id);
+  },
+
+  computed: {
+    gallary_id: {
+      get() {
+        return this.$store.getters.get_gallary_id;
+      },
+      set(value) {
+        this.$store.commit("set_gallary_id", value);
+      },
+    },
   },
 
   methods: {
