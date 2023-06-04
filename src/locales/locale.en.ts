@@ -9,7 +9,7 @@ const AG_GRID_LOCALE_EN: any = {
   noMatches: "No matches",
 
   // Number Filter & Text Filter
-  filterOoo: "Filter...",
+  filterOoo: "필터...",
   equals: "동일함",
   notEqual: "동일하지 않음",
   blank: "비어 있음",
