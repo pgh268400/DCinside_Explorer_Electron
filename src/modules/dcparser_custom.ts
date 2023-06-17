@@ -128,6 +128,10 @@ class DCAsyncParser {
     return result;
   };
 
+  private sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   // 바로 순수 response data만 응답하는 커스텀 HTTP 요청
   private async custom_fetch(
     url: string,
@@ -142,8 +146,21 @@ class DCAsyncParser {
 
     // ==========================================================
 
-    const res = await this.http.get(url, { headers });
-    return res.data;
+    // const res = await this.http.get(url, { headers });
+    // return res.data;
+
+    // axios.retry 가 걸려있어도 socket hang up이 발생시 Exception이 발생하며 재시도가 안되는 문제가 있음.
+    // 그래서 재시도가 안되는 문제를 해결하기 위해 아래와 같이 작성함.
+    try {
+      const res = await this.http.get(url, { headers });
+      return res.data;
+    } catch (e) {
+      // 몇 초 기다렸다가 재귀 호출로 재시도
+      await this.sleep(125);
+      // const res = await this.http.get(url, { headers });
+      // return res.data;
+      return await this.custom_fetch(url, headers);
+    }
 
     // return this.http
     //   .get(url, { headers })
@@ -515,11 +532,11 @@ export { DCAsyncParser };
 
 // 실제 실행 코드
 async function main() {
-  const parser = await DCAsyncParser.create("vr_games_xuq");
+  const parser = await DCAsyncParser.create("stream_new1");
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
-    "샀어요",
-    9999,
+    "유니",
+    999,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {
       //

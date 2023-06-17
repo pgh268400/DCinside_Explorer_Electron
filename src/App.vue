@@ -80,7 +80,7 @@
         <v-text-field
           v-model="filter_text"
           append-icon="mdi-magnify"
-          label="필터링"
+          label="전체 필터링"
           single-line
           hide-details
           style="margin-bottom: 2px"
@@ -102,6 +102,7 @@
             suppressBrowserResizeObserver="true"
             :cacheQuickFilter="true"></ag-grid-vue>
         </template>
+
         <v-row class="pagination-bar" align="center" justify="end">
           <v-col cols="auto">
             <div style="height: 25px" class="no-drag">
@@ -266,7 +267,7 @@ export default Vue.extend({
         columns: [
           {
             field: "번호",
-            width: 90,
+            width: 95,
             cellRenderer: "CustomLinkRenderer",
             cellRendererParams: "",
             // filter: "agNumberColumnFilter",

@@ -183,10 +183,11 @@ class DCAsyncParser {
 
     // axios auto retry
     axiosRetry(this.http, {
-      retries: 3,
+      retries: 5,
       retryDelay: (retryCount) => {
         return 125;
       },
+      retryCondition: (e) => true,
     });
   }
 
@@ -492,10 +493,10 @@ export { DCAsyncParser };
 
 // 실제 실행 코드
 async function main() {
-  const parser = await DCAsyncParser.create("vr_games_xuq");
+  const parser = await DCAsyncParser.create("stream_new1");
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
-    "샀어요",
+    "유니",
     9999,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {
