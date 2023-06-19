@@ -127,6 +127,10 @@ class DCAsyncParser {
     return result;
   };
 
+  private sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   // 순수 response data만 응답하는 커스텀 HTTP 요청
   private async custom_fetch(
     url: string,
@@ -141,8 +145,22 @@ class DCAsyncParser {
 
     // ==========================================================
 
-    const res = await this.http.get(url, { headers });
-    return res.data;
+    // const res = await this.http.get(url, { headers });
+    // return res.data;
+
+    // axios.retry 가 걸려있어도 socket hang up이 발생시 Exception이 발생하며 재시도가 안되는 문제가 있음.
+    // 그래서 재시도가 안되는 문제를 해결하기 위해 아래와 같이 작성함.
+    try {
+      const res = await this.http.get(url, { headers });
+      return res.data;
+    } catch (e) {
+      console.log("소켓 연결이 끊겼습니다. 125ms 이후 재시도 합니다...");
+      // 몇 초 기다렸다가 재귀 호출로 재시도
+      await this.sleep(125);
+      // const res = await this.http.get(url, { headers });
+      // return res.data;
+      return await this.custom_fetch(url, headers);
+    }
 
     // return this.http
     //   .get(url, { headers })
