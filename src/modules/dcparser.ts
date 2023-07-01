@@ -134,7 +134,8 @@ class DCAsyncParser {
   // 순수 response data만 응답하는 커스텀 HTTP 요청
   private async custom_fetch(
     url: string,
-    headers = this.headers
+    headers = this.headers,
+    retry_count = 0
   ): Promise<string> {
     // 타임아웃과 keepAlive를 설정해야지 연결이 끊기지 않고 TCP Connection을 재활용할 수 있음.
     // 아마 파이썬의 session.get 과 유사한 기능인듯?
@@ -150,6 +151,8 @@ class DCAsyncParser {
 
     // axios.retry 가 걸려있어도 socket hang up이 발생시 Exception이 발생하며 재시도가 안되는 문제가 있음.
     // 그래서 재시도가 안되는 문제를 해결하기 위해 아래와 같이 작성함.
+
+    if (retry_count > 2) throw new Error("HTTP 요청이 3번 실패했습니다.");
     try {
       const res = await this.http.get(url, { headers });
       return res.data;
@@ -159,7 +162,7 @@ class DCAsyncParser {
       await this.sleep(125);
       // const res = await this.http.get(url, { headers });
       // return res.data;
-      return await this.custom_fetch(url, headers);
+      return await this.custom_fetch(url, headers, retry_count + 1);
     }
 
     // return this.http
@@ -174,7 +177,11 @@ class DCAsyncParser {
   private async initialize(): Promise<void> {
     try {
       const url = `https://gall.dcinside.com/board/lists?id=${this.id}`;
-      const res = await this.custom_fetch(url);
+      // const res = await this.custom_fetch(url);
+      // custom_fetch 는 자동 retry가 함수 내부에 걸려있어서
+      // 여기선 exception 여부로 갤러리 타입을 체크할것이기 때문에 사용하지 않음.
+      const axios_res = await this.http.get(url);
+      const res = axios_res.data;
 
       this.gallary_type = Gallary.Default;
 
@@ -511,10 +518,10 @@ export { DCAsyncParser };
 
 // 실제 실행 코드
 async function main() {
-  const parser = await DCAsyncParser.create("stream_new1");
+  const parser = await DCAsyncParser.create("dataprocessing");
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
-    "유니",
+    "22일",
     9999,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {

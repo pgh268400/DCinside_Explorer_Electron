@@ -9,7 +9,9 @@
     "electron:build": "vue-cli-service electron:build",
     "electron:serve": "vue-cli-service electron:serve",
     "postinstall": "electron-builder install-app-deps",
-    "postuninstall": "electron-builder install-app-deps"
+    "postuninstall": "electron-builder install-app-deps",
+    "dist:build": "cross-env NODE_ENV=production NODE_OPTIONS='--max-old-space-size=8192' electron-builder",
+    "dist:build2": "cross-env NODE_ENV=production NODE_OPTIONS='--max-old-space-size=8192' vue-cli-service electron:build"
   },
   "main": "background.js",
   "dependencies": {
@@ -27,6 +29,7 @@
     "axios-retry": "^3.4.0",
     "cli-progress": "^3.12.0",
     "core-js": "^3.30.2",
+    "cross-env": "^7.0.3",
     "node-fetch": "^2.6.11",
     "node-html-parser": "^6.1.5",
     "node-polyfill-webpack-plugin": "^2.0.1",

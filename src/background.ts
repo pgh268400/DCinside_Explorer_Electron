@@ -12,8 +12,8 @@ const width = 1275 + 400;
 const height = 840;
 
 // 메모리 제한 조정
-const mem_limit = 8192;
-app.commandLine.appendSwitch("js-flags", `--max-old-space-size=${mem_limit}`);
+// const mem_limit = 8192;
+// app.commandLine.appendSwitch("js-flags", `--max-old-space-size=${mem_limit}`);
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
