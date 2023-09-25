@@ -13,8 +13,7 @@
         @mousemove="drag"
         @mouseup="end_drag"
         @mouseleave="end_drag">
-        <v-app-bar-nav-icon
-          @click="isOpenMenu = !isOpenMenu"></v-app-bar-nav-icon>
+        <v-app-bar-nav-icon @click="open_drawer"></v-app-bar-nav-icon>
         <v-toolbar-title class="pl-1">{{ title }}</v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="minimize_window">
@@ -58,13 +57,13 @@
               dark
               class="mt-2"
               @click="search_btn_click"
-              :loading="search_btn.isLoading">
+              :loading="search_btn.is_loading">
               <v-icon>mdi-magnify</v-icon>
             </v-btn>
           </v-col>
         </v-row>
         <!-- 검색 중에만 프로그래스바, 설명 표시 -->
-        <div v-if="search_btn.isLoading">
+        <div v-if="search_btn.is_loading">
           <v-progress-linear
             color="primary"
             :value="progress_value"
@@ -122,10 +121,10 @@
             {{ ag_grid_vue.total_item_cnt }}
           </v-col>
           <v-col cols="auto">
-            <v-btn icon @click="first_page" :disabled="isFirstPage">
+            <v-btn icon @click="first_page" :disabled="is_first_page">
               <v-icon>mdi-page-first</v-icon>
             </v-btn>
-            <v-btn icon @click="prev_page" :disabled="isFirstPage">
+            <v-btn icon @click="prev_page" :disabled="is_first_page">
               <v-icon>mdi-chevron-left</v-icon>
             </v-btn>
             <span v-if="ag_grid_vue.total_page" class="no-drag">
@@ -139,21 +138,21 @@
             <v-btn
               icon
               @click="next_page"
-              :disabled="isLastPage && !search_btn.isLoading">
+              :disabled="is_last_page && !search_btn.is_loading">
               <v-icon>mdi-chevron-right</v-icon>
             </v-btn>
             <v-btn
               icon
               @click="last_page"
-              :disabled="isLastPage && !search_btn.isLoading">
+              :disabled="is_last_page && !search_btn.is_loading">
               <v-icon>mdi-page-last</v-icon>
             </v-btn>
           </v-col>
         </v-row>
       </v-container>
     </v-main>
-    <!-- 다이얼 로그 -->
-    <v-dialog v-model="isOpenMenu" width="500px">
+    <!-- 설정 다이얼 로그 -->
+    <v-dialog v-model="is_open_settings" width="500px">
       <v-card>
         <v-toolbar density="compact" :color="theme_color" dense>
           <v-toolbar-title>
@@ -168,8 +167,10 @@
                 label="최대 병렬 처리 횟수"
                 outlined
                 clearable
-                v-model="settings.program_entire_settings.max_parallel"
-                height="auto"></v-text-field>
+                v-model.number="settings.program_entire_settings.max_parallel"
+                height="auto"
+                type="number"
+                hide-spin-buttons></v-text-field>
             </v-list-item-content>
             <v-tooltip right :max-width="404">
               <template v-slot:activator="{ on, attrs }">
@@ -216,36 +217,116 @@
               </v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
+          <v-divider></v-divider>
+          <v-subheader>자동 저장</v-subheader>
+          <v-list-item>
+            <v-list-item-action>
+              <v-checkbox
+                v-model="
+                  settings.user_preferences.auto_save_result
+                "></v-checkbox>
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>자동 저장 활성화</v-list-item-title>
+              <v-list-item-subtitle>
+                최근 검색 기록을 자동 저장합니다
+              </v-list-item-subtitle>
+            </v-list-item-content>
+          </v-list-item>
         </div>
         <v-card-actions class="justify-center">
-          <v-btn variant="text" @click="isOpenMenu = false">확인</v-btn>
+          <v-btn variant="text" @click="submit_settings">확인</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- About 다이얼 로그 -->
+    <v-dialog v-model="is_open_about" width="550px">
+      <v-card>
+        <v-toolbar density="compact" :color="theme_color" dense>
+          <v-toolbar-title>
+            <span style="color: white">About</span>
+          </v-toolbar-title>
+        </v-toolbar>
+        <div class="pa-4 text-center">
+          <v-subheader class="justify-center">
+            디시인사이드 초고속 글 검색기
+          </v-subheader>
+          <v-list-item class="justify-center">
+            <img
+              src="https://i.redd.it/dgg8lowfznd61.jpg"
+              alt="https://avatars.githubusercontent.com/u/31213158?v=4"
+              width="400"
+              height="400" />
+          </v-list-item>
+          <v-list-item>
+            <v-list-item-content class="pb-0">
+              <v-list-item-title class="font-weight-bold">
+                <a @click="open_about_link" style="text-decoration: underline">
+                  Copyright 2023. File(pgh268400)
+                  <br />
+                  ALL RIGHTS RESERVED.
+                </a>
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
+    <v-navigation-drawer v-model="is_open_drawer" absolute temporary>
+      <v-list-item>
+        <v-list-item-content>
+          <v-list-item-title class="text-h6 font-weight-bold">
+            디시인사이드 글 검색기
+          </v-list-item-title>
+          <v-list-item-subtitle>written by pgh268400</v-list-item-subtitle>
+        </v-list-item-content>
+      </v-list-item>
+      <v-divider></v-divider>
+      <v-list dense nav>
+        <v-list-item
+          v-for="item in drawer_items"
+          :key="item.title"
+          link
+          @click="drawer_item_click(item.action)">
+          <v-list-item-icon>
+            <v-icon>{{ item.icon }}</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <!-- 폰트 class 로 조정 -->
+            <v-list-item-title class="font-weight-regular">
+              {{ item.title }}
+            </v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
   </v-app>
 </template>
 
 <script lang="ts">
 import { ipcRenderer, remote } from "electron";
 import Vue from "vue";
-import { Article } from "./types/dcinside";
-import { DCWebRequest } from "./types/ipc";
-
+import { Article } from "../types/dcinside";
+import { DCWebRequest } from "../types/ipc";
 import fs from "fs";
-import { SaveData } from "./types/view";
+import { AGGridVueArticle, DrawerAction, SaveData } from "../types/view";
 import { AgGridVue } from "ag-grid-vue";
 import CustomLinkRenderer from "./components/CustomLinkRenderer.vue";
-import AG_GRID_LOCALE_EN from "./locales/locale.en";
 import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
-import { Nullable } from "./types/default";
+import { Nullable } from "../types/default";
+import AG_GRID_LOCALE_EN from "./locales/locale.en";
+import { shell } from "electron";
 
 export default Vue.extend({
   name: "App",
-
   data() {
     return {
       title: "DCInside Explorer",
-      theme_color: "#3B4890",
+      theme_color: "#3B4890", // 프로그램 테마 색상
+      save_file_name: "dc_data.json", // 프로그램 설정 파일 이름
       select_box: {
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
@@ -255,12 +336,27 @@ export default Vue.extend({
         selected_item: "",
       },
 
+      drawer_items: [
+        {
+          title: "설정",
+          icon: "mdi-cog",
+          action: DrawerAction.Settings,
+        },
+        {
+          title: "불러오기",
+          icon: "mdi-file",
+          action: DrawerAction.Load,
+        },
+        { title: "About", icon: "mdi-help-box", action: DrawerAction.About },
+      ],
+
       ag_grid_vue: {
         // ag_grid_vue 의 모든 Column 에 기본 적용되는 옵션
         default_columns_def: {
           sortable: true,
           resizable: true,
           cellStyle: { fontSize: "0.875rem" },
+          lockVisible: true, // 열 삭제 기능 제거
           // wrapText: true,
           // autoHeight: true,
         },
@@ -297,7 +393,7 @@ export default Vue.extend({
         ],
         rows: [
           // { 열1: "값1", 열2: "값2", 열3: 값3 },
-        ],
+        ] as AGGridVueArticle[],
         locale_text: AG_GRID_LOCALE_EN,
         grid_api: null as Nullable<GridApi>,
         grid_column_api: null as Nullable<ColumnApi>,
@@ -334,7 +430,7 @@ export default Vue.extend({
       },
 
       search_btn: {
-        isLoading: false,
+        is_loading: false,
       },
       data_table_loading: false,
       repeat_cnt: 0,
@@ -349,7 +445,9 @@ export default Vue.extend({
       startX: 0,
       startY: 0,
       // ====
-      isOpenMenu: false,
+      is_open_settings: false,
+      is_open_about: false,
+      is_open_drawer: false,
       filter_text: "",
       settings: {
         program_entire_settings: {
@@ -357,6 +455,7 @@ export default Vue.extend({
         },
         user_preferences: {
           clear_data_on_search: true,
+          auto_save_result: true,
         },
       },
     };
@@ -374,7 +473,7 @@ export default Vue.extend({
     this.page_select_box.selected_item = this.page_select_box.items[0];
 
     try {
-      const data = await fs.promises.readFile("data.json", "utf-8");
+      const data = await fs.promises.readFile(this.save_file_name, "utf-8");
       const parsed_data: SaveData = JSON.parse(data);
       this.repeat_cnt = parsed_data.repeat_cnt;
       this.gallary_id = parsed_data.gallary_id;
@@ -402,12 +501,17 @@ export default Vue.extend({
         user_preferences: {
           clear_data_on_search:
             this.settings.user_preferences.clear_data_on_search,
+          auto_save_result: this.settings.user_preferences.auto_save_result,
         },
       },
     };
 
     try {
-      await fs.promises.writeFile("data.json", JSON.stringify(data));
+      await fs.promises.writeFile(
+        this.save_file_name,
+        // 들여쓰기까지 포함해 깔끔하게 저장
+        JSON.stringify(data, null, 2)
+      );
       console.log(data, "Data saved successfully");
     } catch (err) {
       console.error(err);
@@ -415,6 +519,32 @@ export default Vue.extend({
   },
 
   methods: {
+    open_about_link() {
+      shell.openExternal("https://github.com/pgh268400");
+    },
+    // 왼쪽 네비게이션 서랍 메뉴 클릭 시 실행되는 함수
+    drawer_item_click(action: DrawerAction) {
+      // console.log(action);
+      if (action === DrawerAction.Settings) {
+        this.is_open_settings = true;
+      } else if (action === DrawerAction.Load) {
+        //
+      } else if (action === DrawerAction.About) {
+        this.is_open_about = true;
+      }
+
+      // 아이템을 누르면 왼쪽의 네비게이션 서랍은 닫힌다.
+      this.is_open_drawer = false;
+    },
+    // 왼쪽 위 석삼자 누를 시 실행되는 함수
+    open_drawer() {
+      this.is_open_drawer = !this.is_open_drawer;
+    },
+    // 설정 파일 확인 버튼 누를 시 실행되는 함수
+    submit_settings() {
+      // dialog 닫기
+      this.is_open_settings = false;
+    },
     onFilterTextChange() {
       if (this.ag_grid_vue.grid_api) {
         setTimeout(() => {
@@ -552,7 +682,7 @@ export default Vue.extend({
         this.ag_grid_vue.rows = [];
       }
 
-      this.search_btn.isLoading = true;
+      this.search_btn.is_loading = true;
 
       console.log(typeof this.repeat_cnt);
 
@@ -562,6 +692,9 @@ export default Vue.extend({
         repeat_cnt: this.repeat_cnt,
         keyword: this.keyword,
         search_type: this.string_to_query(this.select_box.selected_item),
+        option: {
+          requests_limit: this.settings.program_entire_settings.max_parallel,
+        },
       } as DCWebRequest);
 
       console.log({
@@ -574,7 +707,7 @@ export default Vue.extend({
       // 백그라운드 서버로부터 응답 받기
       ipcRenderer.on("web-request-response", (event, result: Article[][]) => {
         console.log(result.length);
-        const items: any = [];
+        const items: AGGridVueArticle[] = [];
 
         console.time("배열 삽입 시간 : ");
         for (let article of result) {
@@ -600,7 +733,12 @@ export default Vue.extend({
         this.ag_grid_vue.rows = items;
         // console.log(this.data_table.items);
 
-        this.search_btn.isLoading = false;
+        // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
+        if (this.settings.user_preferences.auto_save_result) {
+          // 먼저 설정 파일을 불러온다
+        }
+
+        this.search_btn.is_loading = false;
       });
 
       ipcRenderer.on(
@@ -622,7 +760,7 @@ export default Vue.extend({
         this.$store.commit("set_gallary_id", value);
       },
     },
-    isFirstPage() {
+    is_first_page() {
       if (
         this.ag_grid_vue.current_page === 1 &&
         this.ag_grid_vue.start_page_idx === 1
@@ -632,7 +770,7 @@ export default Vue.extend({
         return false;
       }
     },
-    isLastPage() {
+    is_last_page() {
       if (
         this.ag_grid_vue.current_page === this.ag_grid_vue.total_page &&
         this.ag_grid_vue.end_page_idx === this.ag_grid_vue.total_item_cnt
@@ -642,6 +780,19 @@ export default Vue.extend({
         return false;
       }
     },
+  },
+  watch: {
+    /*
+    // max_parallel 이 object 안에 들어가 있으므로
+    // 프로퍼티 내부의 중첩된 값 변경을 감지하려면 Deep Watcher (깊은 감시자)를 사용해야 함
+    // https://jodong.tistory.com/9
+    "settings.program_entire_settings.max_parallel": {
+      deep: true,
+      handler(new_val: string, old_val: string) {
+        console.log("max_parallel", new_val);
+      },
+    },
+    */
   },
 });
 </script>

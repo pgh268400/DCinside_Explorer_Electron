@@ -1,3 +1,5 @@
+<!-- 검색 후 번호에 링크를 달기 위해 사용하는 ag-grid-vue를 위한 특수 컴포넌트 -->
+
 <template>
   <a href="#" @click="url_open">{{ value }}</a>
 </template>

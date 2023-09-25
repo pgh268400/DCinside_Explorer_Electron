@@ -1,14 +1,18 @@
 /* eslint-disable prefer-const */
-import axios from "axios";
-import { Gallary, Search, Page, Article } from "../types/dcinside";
+import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { Gallary, Search, Page, Article } from "@/types/dcinside";
+import { parse } from "node-html-parser";
+import pLimit from "p-limit";
+import { wrapper } from "axios-cookiejar-support";
+import { CookieJar } from "tough-cookie";
 import rateLimit from "axios-rate-limit";
 import * as http from "http";
 import * as https from "https";
 import axiosRetry from "axios-retry";
+import fetch from "node-fetch";
 import * as cliProgress from "cli-progress";
 
 class DCAsyncParser {
-  // 비동기 병렬처리 성능 향상을 위해 웹 파싱 시 라이브러리를 사용하지 않는다.
   // ==========================================================
   // 멤버 변수 선언
   private headers = {
@@ -16,6 +20,7 @@ class DCAsyncParser {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
     Accept:
       "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    Referer: "https://gall.dcinside.com/board/lists/?id=baseball_new11",
     "Sec-Fetch-Site": "same-origin",
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-User": "?1",
@@ -127,15 +132,10 @@ class DCAsyncParser {
     return result;
   };
 
-  private sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  // 순수 response data만 응답하는 커스텀 HTTP 요청
+  // 바로 순수 response data만 응답하는 커스텀 HTTP 요청
   private async custom_fetch(
     url: string,
-    headers = this.headers,
-    retry_count = 0
+    headers = this.headers
   ): Promise<string> {
     // 타임아웃과 keepAlive를 설정해야지 연결이 끊기지 않고 TCP Connection을 재활용할 수 있음.
     // 아마 파이썬의 session.get 과 유사한 기능인듯?
@@ -146,24 +146,8 @@ class DCAsyncParser {
 
     // ==========================================================
 
-    // const res = await this.http.get(url, { headers });
-    // return res.data;
-
-    // axios.retry 가 걸려있어도 socket hang up이 발생시 Exception이 발생하며 재시도가 안되는 문제가 있음.
-    // 그래서 재시도가 안되는 문제를 해결하기 위해 아래와 같이 작성함.
-
-    if (retry_count > 2) throw new Error("HTTP 요청이 3번 실패했습니다.");
-    try {
-      const res = await this.http.get(url, { headers });
-      return res.data;
-    } catch (e) {
-      console.log("소켓 연결이 끊겼습니다. 125ms 이후 재시도 합니다...");
-      // 몇 초 기다렸다가 재귀 호출로 재시도
-      await this.sleep(125);
-      // const res = await this.http.get(url, { headers });
-      // return res.data;
-      return await this.custom_fetch(url, headers, retry_count + 1);
-    }
+    const res = await this.http.get(url, { headers });
+    return res.data;
 
     // return this.http
     //   .get(url, { headers })
@@ -175,49 +159,38 @@ class DCAsyncParser {
   }
 
   private async initialize(): Promise<void> {
-    try {
-      const url = `https://gall.dcinside.com/board/lists?id=${this.id}`;
-      // const res = await this.custom_fetch(url);
-      // custom_fetch 는 자동 retry가 함수 내부에 걸려있어서
-      // 여기선 exception 여부로 갤러리 타입을 체크할것이기 때문에 사용하지 않음.
-      const axios_res = await this.http.get(url);
-      const res = axios_res.data;
+    const url = `https://gall.dcinside.com/board/lists?id=${this.id}`;
+    const res = await this.custom_fetch(url);
 
-      this.gallary_type = Gallary.Default;
-
-      if (res.includes("location.replace")) {
-        if (res.includes("mgallery")) {
-          this.gallary_type = Gallary.Miner;
-        }
+    if (res.includes("location.replace")) {
+      if (res.includes("mgallery")) {
+        this.gallary_type = Gallary.Miner;
+      } else {
+        this.gallary_type = Gallary.Mini;
       }
-    } catch (e: any) {
-      this.gallary_type = Gallary.Mini;
+    } else {
+      this.gallary_type = Gallary.Default;
     }
 
     // for debug===============================================
-    // let output = "";
-    // if (this.gallary_type === Gallary.Default) {
-    //   output = "일반";
-    // } else if (this.gallary_type === Gallary.Miner) {
-    //   output = "마이너";
-    // } else if (this.gallary_type === Gallary.Mini) {
-    //   output = "미니";
-    // }
+    let output = "";
+    if (this.gallary_type === Gallary.Default) {
+      output = "일반";
+    } else if (this.gallary_type === Gallary.Miner) {
+      output = "마이너";
+    } else if (this.gallary_type === Gallary.Mini) {
+      output = "미니";
+    }
     // console.log("갤러리 타입 :", output);
     // ==========================================================
 
     // axios auto retry
     axiosRetry(this.http, {
-      retries: 5,
+      retries: 3,
       retryDelay: (retryCount) => {
         return 125;
       },
-      retryCondition: (e) => true,
     });
-  }
-
-  public get_garllery_type(): string {
-    return this.gallary_type;
   }
 
   private async get_page_structure(pos: number): Promise<Page> {
@@ -248,12 +221,6 @@ class DCAsyncParser {
     return { pos, start_page, last_page };
   }
 
-  // 문자열이 비어있는지 확인하는 함수
-  private isEmpty(data: string) {
-    if (typeof data == "undefined" || data == null || data == "") return true;
-    else return false;
-  }
-
   private async get_article_from_page(
     pos: number,
     page: number
@@ -280,18 +247,10 @@ class DCAsyncParser {
       // tr 태그 안에 있는 문자열 가져오기
       const gall_num: string = (tr.match(
         /<td class="gall_num".*?>(.*?)<\/td>/s
-      ) || "")[1].trim();
+      ) || [])[1].trim();
 
       let gall_tit: string = (tr.match(/<td class="gall_tit.*?>(.*?)<\/td>/s) ||
-        "")[1].trim();
-
-      let reply_num: string = gall_tit.split('reply_num">[')[1];
-      if (this.isEmpty(reply_num)) {
-        reply_num = "0";
-      } else {
-        reply_num = reply_num.split("]</span>")[0];
-      }
-      // console.log(reply_num);
+        [])[1].trim();
 
       // 쓸데없는 태그 내용들 다 날리기
       gall_tit = gall_tit.split('view-msg ="">')[1].split("</a>")[0].trim();
@@ -304,17 +263,7 @@ class DCAsyncParser {
       regex = /<\/?strong>/gi;
       gall_tit = gall_tit.replace(regex, "");
 
-      // &nbsp, &lt; 등 치환
-      gall_tit = gall_tit
-        .replaceAll("&nbsp;", " ")
-        .replaceAll("&lt;", "<")
-        .replaceAll("&gt;", ">")
-        .replaceAll("&amp;", "&")
-        .replaceAll("&quot;", '"')
-        .replaceAll("&#035;", "#")
-        .replaceAll("&#039;", "'");
-
-      const gall_writer = (tr.match(/data-nick="([^"]*)"/) || "")[1].trim();
+      const gall_writer = (tr.match(/data-nick="([^"]*)"/) || [])[1].trim();
       const gall_date = (tr.match(/<td class="gall_date".*?>(.*?)<\/td>/) ||
         [])[1].trim();
       const gall_count = (tr.match(/<td class="gall_count">(.*?)<\/td>/) ||
@@ -323,7 +272,7 @@ class DCAsyncParser {
       // console.log(tr);
 
       let gall_recommend: any =
-        tr.match(/<td class="gall_recommend">(.*?)<\/td>/) || "";
+        tr.match(/<td class="gall_recommend">(.*?)<\/td>/) || [];
 
       if (gall_recommend.length > 0) {
         gall_recommend = gall_recommend[1].trim();
@@ -339,7 +288,7 @@ class DCAsyncParser {
         gall_date,
         gall_count: parseInt(gall_count),
         gall_recommend: parseInt(gall_recommend),
-        reply_num: parseInt(reply_num),
+        reply_num: 0,
       });
     }
 
@@ -367,14 +316,10 @@ class DCAsyncParser {
 
     let next_pos_obj = res.match(/search_pos=(-?\d+)/);
 
-    let next_pos = 0;
     if (next_pos_obj == null || next_pos_obj.length == 0) {
-      // 다음 검색 위치를 찾을 수 없음 = 글이 10000개 이하인 경우 (0번부터 검색)
-      // throw new Error("다음 검색 위치를 찾을 수 없습니다.");
-      next_pos = 0;
-    } else {
-      next_pos = parseInt(next_pos_obj[1]);
+      throw new Error("다음 검색 위치를 찾을 수 없습니다.");
     }
+    const next_pos = parseInt(next_pos_obj[1]);
 
     const current_pos: number = next_pos - 10000;
     if (isdebug) {
@@ -409,10 +354,10 @@ class DCAsyncParser {
       tmp_pos_list.push(tmp_pos); // 지워도 됨 디버깅용
       page_tasks.push(this.get_page_structure(tmp_pos));
 
+      tmp_pos += 10000;
       if (Math.abs(tmp_pos) < 10000) {
         break;
       }
-      tmp_pos += 10000;
     }
 
     if (isdebug) {
@@ -421,6 +366,10 @@ class DCAsyncParser {
 
       console.time("작업 소요 시간");
     }
+
+    // const page_structure = await this.promise_all_progress(page_tasks, (p) => {
+    //   console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+    // });
 
     let page_structure;
     if (isdebug) {
@@ -446,7 +395,7 @@ class DCAsyncParser {
         100,
         page_tasks.map((p) => () => p),
         (p) => {
-          progress_call_back(p.toFixed(2), "페이지 구조를 수집중입니다...");
+          progress_call_back(p.toFixed(2));
           // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
         }
       );
@@ -464,12 +413,34 @@ class DCAsyncParser {
       }
     }
 
+    // const article_tasks: Promise<Article[]>[] = [];
+    // for (let item of page_structure) {
+    //   if (item.status === "fulfilled") {
+    //     for (
+    //       let page = item.value.start_page;
+    //       page <= item.value.last_page;
+    //       page++
+    //     ) {
+    //       article_tasks.push(this.get_article_from_page(item.value.pos, page));
+    //     }
+    //   } else {
+    //     console.log("작업 실패");
+    //   }
+    // }
+
     if (isdebug) {
       console.log("페이지별 글 목록 수집 시작...");
       console.log(`총 ${article_tasks.length}개의 작업을 수행합니다.`);
 
       console.time("작업 소요 시간");
     }
+
+    // const articles = await this.promise_all_progress(
+    //   article_tasks,
+    //   (p: any) => {
+    //     console.log(`작업 수행률 = ${p.toFixed(2)}%`);
+    //   }
+    // );
 
     let articles;
     if (isdebug) {
@@ -496,10 +467,7 @@ class DCAsyncParser {
         article_tasks.map((p) => () => p),
         (p) => {
           // console.log(`작업 수행률 = ${p.toFixed(2)}%`);
-          progress_call_back(
-            p.toFixed(2),
-            "페이지별 글 목록을 수집중입니다..."
-          );
+          progress_call_back(p.toFixed(2));
         }
       );
     }
@@ -518,18 +486,17 @@ export { DCAsyncParser };
 
 // 실제 실행 코드
 async function main() {
-  const parser = await DCAsyncParser.create("dataprocessing");
+  const parser = await DCAsyncParser.create("baseball_new11");
   const result = await parser.search(
     Search.TITLE_PLUS_CONTENT,
-    "22일",
-    9999,
+    "야순이",
+    100,
     // slint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     (p: number) => {
       //
     },
     true
   );
-
   // console.log(result);
   // const parser = await DCAsyncParser.create("tboi");
   // const result = await parser.search(

@@ -1,11 +1,11 @@
 /* eslint-disable prefer-const */
 import axios from "axios";
-import { Gallary, Search, Page, Article } from "../types/dcinside";
 import rateLimit from "axios-rate-limit";
 import * as http from "http";
 import * as https from "https";
 import axiosRetry from "axios-retry";
 import * as cliProgress from "cli-progress";
+import { Gallary, Search, Page, Article } from "@/types/dcinside";
 
 class DCAsyncParser {
   // 비동기 병렬처리 성능 향상을 위해 웹 파싱 시 라이브러리를 사용하지 않는다.

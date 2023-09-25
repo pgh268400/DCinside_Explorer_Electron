@@ -1,9 +1,19 @@
+// 일렉트론 백그라운드 프로세스 (핵심 메인 프로세스)
+
 "use strict";
 
-import { app, protocol, BrowserWindow, ipcMain, shell } from "electron";
+import {
+  app,
+  protocol,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  clipboard,
+} from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
-import { DCWebRequest } from "./types/ipc";
+import { DCAsyncParser } from "./modules/dcparser";
+import { DCWebRequest } from "@/types/ipc";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -32,7 +42,7 @@ async function createWindow() {
       // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
       // nodeIntegration: process.env
       //   .ELECTRON_NODE_INTEGRATION as unknown as boolean,
-      // contextIsolation: !process.env.ELECTRON_NODE_INTEGRATION,
+      // contextIsolation: !(process.env.ELECTRON_NODE_INTEGRATION as unknown) as boolean,
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
@@ -51,6 +61,29 @@ async function createWindow() {
     // Load the index.html when not in development
     win.loadURL("app://./index.html");
   }
+
+  // 창 포커싱 됐을때 이벤트
+  // win.on("focus", () => {
+  //   // 포커싱 되면 현재 클립보드의 값을 가져온다.
+  //   const clipboard_text = clipboard.readText();
+  //   console.log(clipboard_text);
+
+  //   // 클립보드에 갤러리 주소가 있는지 확인하고, id를 추출한다.
+  //   // (\w+) = 단어 추출 (숫자, 영문, _)
+  //   const pattern = /https:\/\/gall\.dcinside\.com\/.+\/.+\/?\?id=(\w+)/;
+
+  //   const match = clipboard_text.match(pattern);
+
+  //   if (match) {
+  //     const gallary_id = match[1]; // "habj"
+  //     console.log(gallary_id);
+  //   }
+  // });
+
+  // 창 포커싱 풀렸을 때 이벤트
+  // win.on("blur", () => {
+  //   console.log("window blur");
+  // });
 }
 
 // Quit when all windows are closed.
@@ -67,9 +100,6 @@ app.on("activate", () => {
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
-
-import fs from "fs";
-import { DCAsyncParser } from "./modules/dcparser";
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -88,12 +118,14 @@ app.on("ready", async () => {
   // 파싱 객체를 ipcMain 에서 전역적으로 사용할 수 있도록 한다.
   let parser: DCAsyncParser;
 
-  // 웹 요청 처리
+  // 웹 요청 처리 (검색)
   ipcMain.on("web-request", async (event, arg: DCWebRequest) => {
-    const { id, repeat_cnt, keyword, search_type } = arg;
+    const { id, repeat_cnt, keyword, search_type, option } = arg;
     try {
       // const parser = await DCAsyncParser.create(id);
-      parser = await DCAsyncParser.create(id);
+      // 검색 버튼을 누를때마다 객체를 새로 생성하여 검색한다.
+      // 객체 생성 & 초기화 시점 = 검색 버튼을 누를때
+      parser = await DCAsyncParser.create(id, option);
       const result = await parser.search(
         search_type,
         keyword,
@@ -111,10 +143,12 @@ app.on("ready", async () => {
     }
   });
 
+  // 종료 요청 처리
   ipcMain.on("close-me", (event, arg) => {
     app.quit();
   });
 
+  // 갤러리 ID 클릭 시 해당 갤러리 페이지 여는 IPC
   ipcMain.on("open-link", async (event, gallary_id: string, no: string) => {
     if (parser) {
       const g_type = parser.get_garllery_type();
@@ -122,6 +156,17 @@ app.on("ready", async () => {
       shell.openExternal(url);
     }
   });
+
+  // 요청 제한 설정 (생각해보니 검색할때마다 객체를 새로 생성해서 이렇게 setter 을 쓰는게 의미가 없음.)
+  // ipcMain.on("set-request-limit", async (event, request_limit: number) => {
+  //   if (parser) {
+  //     console.log("set-request-limit", request_limit);
+  //     // 타입 출력
+  //     console.log(typeof request_limit);
+  //     // request_limit 타입 출력
+  //     parser.set_request_limit(request_limit);
+  //   }
+  // });
 });
 
 // Exit cleanly on request from parent process in development mode.

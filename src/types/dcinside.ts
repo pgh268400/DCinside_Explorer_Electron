@@ -1,4 +1,4 @@
-// 사용할 타입 정의
+// Node.js 메인 코드에서 사용할 타입 정의
 enum Gallary {
   Default = "",
   Miner = "mgallery/",
@@ -29,4 +29,9 @@ interface Article {
   reply_num: number;
 }
 
-export { Gallary, Search, Page, Article };
+interface CreateOption {
+  requests_limit?: number;
+  requests_delay?: number;
+}
+
+export { Gallary, Search, Page, Article, CreateOption };

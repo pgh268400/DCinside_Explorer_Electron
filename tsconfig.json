@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "types": ["webpack-env"],
     "paths": {
+      // 이를 이용하면 @를 최상단 src 경로로 인식하게 할 수 있다.
       "@/*": ["src/*"]
     },
     "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
