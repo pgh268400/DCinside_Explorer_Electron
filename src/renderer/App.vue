@@ -27,6 +27,7 @@
     <!-- 본문 -->
     <v-main>
       <v-container>
+        <!-- 상단 유저 입력 메뉴 -->
         <v-row>
           <v-col cols="2">
             <v-select
@@ -222,9 +223,7 @@
           <v-list-item>
             <v-list-item-action>
               <v-checkbox
-                v-model="
-                  settings.user_preferences.auto_save_result
-                "></v-checkbox>
+                v-model="settings.auto_save.auto_save_result"></v-checkbox>
             </v-list-item-action>
             <v-list-item-content>
               <v-list-item-title>자동 저장 활성화</v-list-item-title>
@@ -232,6 +231,42 @@
                 최근 검색 기록을 자동 저장합니다
               </v-list-item-subtitle>
             </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item>
+            <v-list-item-content class="pb-0">
+              <v-text-field
+                label="최대 자동 저장 횟수"
+                outlined
+                clearable
+                v-model.number="settings.auto_save.max_auto_save"
+                height="auto"
+                type="number"
+                hide-spin-buttons
+                :disabled="!settings.auto_save.auto_save_result"></v-text-field>
+            </v-list-item-content>
+            <v-tooltip right :max-width="404">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn
+                  fab
+                  small
+                  color="primary"
+                  class="ma-2 mb-7"
+                  elevation="0"
+                  v-bind="attrs"
+                  v-on="on">
+                  <v-icon dark>mdi-help-circle</v-icon>
+                </v-btn>
+              </template>
+              <span>
+                자동 저장 시 최대 저장 횟수를 조정합니다. 예를 들어서 10으로
+                설정한 경우 검색할때마다 최근 10번의 검색 기록을 저장합니다.
+                아주 큰 값을 입력하면 무한정 저장하게 할 수 있으나 용량도 무한히
+                늘어날 수 있으니 주의해야 합니다.
+                <br />
+                <b>기본값 : 10</b>
+              </span>
+            </v-tooltip>
           </v-list-item>
         </div>
         <v-card-actions class="justify-center">
@@ -274,6 +309,66 @@
       </v-card>
     </v-dialog>
 
+    <!-- 저장된 목록 불러오는 다이얼로그 -->
+    <v-dialog v-model="is_open_load" width="550px">
+      <v-card>
+        <v-toolbar density="compact" :color="theme_color" dense>
+          <v-toolbar-title>
+            <span style="color: white">Loading</span>
+          </v-toolbar-title>
+        </v-toolbar>
+        <div class="pa-4">
+          <v-list-item two-line>
+            <v-list-item-content>
+              <v-list-item-title class="text-h5">
+                자동 저장 목록
+              </v-list-item-title>
+              <v-list-item-subtitle>저장 목록 확인</v-list-item-subtitle>
+            </v-list-item-content>
+          </v-list-item>
+          <v-card
+            v-for="(article, index) in auto_save_data"
+            :key="index"
+            shaped
+            elevation="3"
+            class="mb-5 ml-2 mr-2"
+            @click="click_auto_save_item(article)">
+            <v-list-item>
+              <v-list-item-content>
+                <v-list-item-title class="text-h6">
+                  갤러리 : {{ article.user_input.gallary_id }}
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  검색 옵션 : {{ article.user_input.search_type }}
+                </v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  반복 횟수 : {{ article.user_input.repeat_cnt }}
+                </v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  검색어 : {{ article.user_input.keyword }}
+                </v-list-item-subtitle>
+              </v-list-item-content>
+            </v-list-item>
+          </v-card>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <!-- 자동 저장 목록 다이얼로그 -->
+    <v-dialog v-model="is_open_save_data" width="400px">
+      <v-card>
+        <v-toolbar density="compact" :color="theme_color" dense>
+          <v-toolbar-title>
+            <span style="color: white">AutoSave</span>
+          </v-toolbar-title>
+        </v-toolbar>
+        <div class="pa-4">
+          <!-- 자동 저장 목록 본문 -->
+          구현 준비중입니다.
+        </div>
+      </v-card>
+    </v-dialog>
+
     <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
     <v-navigation-drawer v-model="is_open_drawer" absolute temporary>
       <v-list-item>
@@ -312,7 +407,13 @@ import Vue from "vue";
 import { Article } from "../types/dcinside";
 import { DCWebRequest } from "../types/ipc";
 import fs from "fs";
-import { AGGridVueArticle, DrawerAction, SaveData } from "../types/view";
+import {
+  AGGridVueArticle,
+  DrawerAction,
+  SaveArticleData,
+  SaveData,
+  Settings,
+} from "../types/view";
 import { AgGridVue } from "ag-grid-vue";
 import CustomLinkRenderer from "./components/CustomLinkRenderer.vue";
 import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
@@ -326,7 +427,7 @@ export default Vue.extend({
     return {
       title: "DCInside Explorer",
       theme_color: "#3B4890", // 프로그램 테마 색상
-      save_file_name: "dc_data.json", // 프로그램 설정 파일 이름
+      save_file_location: "dc_data.json", // 프로그램 설정 파일 이름
       select_box: {
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
@@ -335,7 +436,7 @@ export default Vue.extend({
         items: ["10", "20", "30", "40", "50", "모두"],
         selected_item: "",
       },
-
+      auto_save_data: [] as SaveArticleData[],
       drawer_items: [
         {
           title: "설정",
@@ -347,9 +448,9 @@ export default Vue.extend({
           icon: "mdi-file",
           action: DrawerAction.Load,
         },
-        { title: "About", icon: "mdi-help-box", action: DrawerAction.About },
+        { title: "정보", icon: "mdi-help-box", action: DrawerAction.About },
       ],
-
+      selected_auto_save_data: null as Nullable<SaveArticleData>,
       ag_grid_vue: {
         // ag_grid_vue 의 모든 Column 에 기본 적용되는 옵션
         default_columns_def: {
@@ -448,6 +549,8 @@ export default Vue.extend({
       is_open_settings: false,
       is_open_about: false,
       is_open_drawer: false,
+      is_open_load: false,
+      is_open_save_data: false,
       filter_text: "",
       settings: {
         program_entire_settings: {
@@ -455,9 +558,12 @@ export default Vue.extend({
         },
         user_preferences: {
           clear_data_on_search: true,
-          auto_save_result: true,
         },
-      },
+        auto_save: {
+          auto_save_result: true,
+          max_auto_save: 10,
+        },
+      } as Settings,
     };
   },
   components: {
@@ -472,8 +578,45 @@ export default Vue.extend({
     this.select_box.selected_item = this.select_box.items[0];
     this.page_select_box.selected_item = this.page_select_box.items[0];
 
+    // 설정 파일이 없다면 생성한다.
+    if (!fs.existsSync(this.save_file_location)) {
+      try {
+        await fs.promises.writeFile(
+          this.save_file_location,
+          JSON.stringify(
+            {
+              search_type: this.select_box.selected_item,
+              repeat_cnt: this.repeat_cnt,
+              gallary_id: this.gallary_id,
+              keyword: this.keyword,
+              settings: {
+                program_entire_settings: {
+                  max_parallel:
+                    this.settings.program_entire_settings.max_parallel,
+                },
+                user_preferences: {
+                  clear_data_on_search:
+                    this.settings.user_preferences.clear_data_on_search,
+                },
+                auto_save: {
+                  auto_save_result: this.settings.auto_save.auto_save_result,
+                  max_auto_save: this.settings.auto_save.max_auto_save,
+                },
+              } as Settings,
+              auto_save: [],
+            } as SaveData,
+            null,
+            2
+          )
+        );
+        console.log("Init Data saved successfully");
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     try {
-      const data = await fs.promises.readFile(this.save_file_name, "utf-8");
+      const data = await fs.promises.readFile(this.save_file_location, "utf-8");
       const parsed_data: SaveData = JSON.parse(data);
       this.repeat_cnt = parsed_data.repeat_cnt;
       this.gallary_id = parsed_data.gallary_id;
@@ -489,6 +632,18 @@ export default Vue.extend({
   // 종료 직전에 실행되는 함수
   async beforeDestroy() {
     // 종료 직전에 프로그램의 입력 데이터를 저장한다.
+
+    // 현재 dc_data.json 에 저장된 데이터를 불러온다.
+    // 자동 저장된 데이터가 있다면 불러오고 없다면 빈 배열을 생성한다.
+    let article_data: SaveArticleData[];
+    const current_data = await fs.promises.readFile("dc_data.json", "utf-8");
+    const parsed_data: SaveData = JSON.parse(current_data);
+    if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
+      article_data = parsed_data.auto_save;
+    } else {
+      article_data = [];
+    }
+
     const data: SaveData = {
       search_type: this.select_box.selected_item,
       repeat_cnt: this.repeat_cnt,
@@ -501,14 +656,18 @@ export default Vue.extend({
         user_preferences: {
           clear_data_on_search:
             this.settings.user_preferences.clear_data_on_search,
-          auto_save_result: this.settings.user_preferences.auto_save_result,
         },
-      },
+        auto_save: {
+          auto_save_result: this.settings.auto_save.auto_save_result,
+          max_auto_save: this.settings.auto_save.max_auto_save,
+        },
+      } as Settings,
+      auto_save: article_data,
     };
 
     try {
       await fs.promises.writeFile(
-        this.save_file_name,
+        this.save_file_location,
         // 들여쓰기까지 포함해 깔끔하게 저장
         JSON.stringify(data, null, 2)
       );
@@ -519,16 +678,28 @@ export default Vue.extend({
   },
 
   methods: {
+    click_auto_save_item(article: SaveArticleData) {
+      this.selected_auto_save_data = article;
+      this.is_open_save_data = !this.is_open_save_data;
+    },
     open_about_link() {
       shell.openExternal("https://github.com/pgh268400");
     },
     // 왼쪽 네비게이션 서랍 메뉴 클릭 시 실행되는 함수
-    drawer_item_click(action: DrawerAction) {
+    async drawer_item_click(action: DrawerAction) {
       // console.log(action);
       if (action === DrawerAction.Settings) {
         this.is_open_settings = true;
       } else if (action === DrawerAction.Load) {
-        //
+        // 불러오기 버튼을 누르면 데이터를 준비한다.
+        const data = await fs.promises.readFile("dc_data.json", "utf-8");
+        const parsed_data: SaveData = JSON.parse(data);
+        if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
+          this.auto_save_data = parsed_data.auto_save;
+        } else {
+          this.auto_save_data = [];
+        }
+        this.is_open_load = true;
       } else if (action === DrawerAction.About) {
         this.is_open_about = true;
       }
@@ -705,41 +876,89 @@ export default Vue.extend({
       });
 
       // 백그라운드 서버로부터 응답 받기
-      ipcRenderer.on("web-request-response", (event, result: Article[][]) => {
-        console.log(result.length);
-        const items: AGGridVueArticle[] = [];
+      ipcRenderer.on(
+        "web-request-response",
+        async (event, result: Article[][]) => {
+          console.log(result.length);
+          const items: AGGridVueArticle[] = [];
 
-        console.time("배열 삽입 시간 : ");
-        for (let article of result) {
-          if (article.length > 0) {
-            for (let item of article) {
-              items.push({
-                번호: item.gall_num,
-                제목: item.gall_tit,
-                댓글수: item.reply_num,
-                작성자: item.gall_writer,
-                조회수: item.gall_count,
-                추천: item.gall_recommend,
-                작성일: item.gall_date,
-              });
+          console.time("배열 삽입 시간 : ");
+          for (let article of result) {
+            if (article.length > 0) {
+              for (let item of article) {
+                items.push({
+                  번호: item.gall_num,
+                  제목: item.gall_tit,
+                  댓글수: item.reply_num,
+                  작성자: item.gall_writer,
+                  조회수: item.gall_count,
+                  추천: item.gall_recommend,
+                  작성일: item.gall_date,
+                });
+              }
             }
           }
+
+          console.timeEnd("배열 삽입 시간 : ");
+
+          // 데이터 바인딩
+          // this.data_table.items = items;
+          this.ag_grid_vue.rows = items;
+          // console.log(this.data_table.items);
+
+          // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
+          if (this.settings.auto_save.auto_save_result) {
+            // 먼저 설정 파일을 불러온다
+            const data = (
+              await fs.promises.readFile(this.save_file_location)
+            ).toString();
+
+            // data를 json으로 파싱한다
+            const parsed_data: SaveData = JSON.parse(data);
+
+            // auto_save 값이 없으면 빈 배열을 추가한다.
+            if (!parsed_data.auto_save) {
+              parsed_data.auto_save = [];
+            }
+
+            const limit = this.settings.auto_save.max_auto_save; // 자동 저장 갯수 제한
+
+            // 갯수 제한에 걸리면 맨 뒷 요소를 제거함 (추가는 뒤에다가 계속함)
+            if (parsed_data.auto_save.length >= limit) {
+              parsed_data.auto_save.pop();
+            }
+
+            // 현재 검색한 내용을 auto_save에 기록한다.
+            parsed_data.auto_save.push({
+              user_input: {
+                search_type: this.select_box.selected_item,
+                repeat_cnt: this.repeat_cnt,
+                gallary_id: this.gallary_id,
+                keyword: this.keyword,
+              },
+              article_data: items,
+            });
+
+            // parsed_data 객체를 JSON 문자열로 변환
+            const json_data = JSON.stringify(parsed_data, null, 2);
+
+            try {
+              // JSON 데이터를 파일에 씁니다.
+              await fs.promises.writeFile(this.save_file_location, json_data);
+              console.log(
+                "[AUTOSAVE] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+              );
+            } catch (error) {
+              console.error(
+                "[AUTOSAVE] 데이터를 저장하는 중 오류가 발생했습니다.",
+                error
+              );
+            }
+          }
+
+          this.search_btn.is_loading = false;
         }
-
-        console.timeEnd("배열 삽입 시간 : ");
-
-        // 데이터 바인딩
-        // this.data_table.items = items;
-        this.ag_grid_vue.rows = items;
-        // console.log(this.data_table.items);
-
-        // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
-        if (this.settings.user_preferences.auto_save_result) {
-          // 먼저 설정 파일을 불러온다
-        }
-
-        this.search_btn.is_loading = false;
-      });
+      );
 
       ipcRenderer.on(
         "web-request-progress",

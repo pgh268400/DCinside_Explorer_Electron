@@ -1,13 +1,24 @@
 // data.json 저장시 사용할 인터페이스 타입 정의
 // 추가로 Vue 렌더러에서 사용할 타입 정의
 
-// json 파일에 저장할 데이터 타입 정의
-interface SaveData {
+// 유저가 입력하는 상단의 4개 입력 폼
+interface UserInput {
   search_type: string;
   repeat_cnt: number;
   gallary_id: string;
   keyword: string;
+}
+
+// 글 자동 저장 / 일반 저장으로 사용할 데이터 타입 정의
+interface SaveArticleData {
+  user_input: UserInput;
+  article_data: AGGridVueArticle[];
+}
+
+// json 파일에 저장할 데이터 타입 정의
+interface SaveData extends UserInput {
   settings: Settings;
+  auto_save?: SaveArticleData[];
 }
 
 // 설정 다이얼로그 저장시 사용할 인터페이스 타입 정의
@@ -17,7 +28,10 @@ interface Settings {
   };
   user_preferences: {
     clear_data_on_search: boolean;
+  };
+  auto_save: {
     auto_save_result: boolean;
+    max_auto_save: number;
   };
 }
 
@@ -40,4 +54,4 @@ enum DrawerAction {
   About = "about",
 }
 
-export { SaveData, DrawerAction, AGGridVueArticle };
+export { SaveArticleData, Settings, SaveData, DrawerAction, AGGridVueArticle };
