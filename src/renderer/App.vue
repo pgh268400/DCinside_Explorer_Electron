@@ -63,93 +63,12 @@
             </v-btn>
           </v-col>
         </v-row>
-        <!-- 검색 중에만 프로그래스바, 설명 표시 -->
-        <div v-if="search_btn.is_loading">
-          <v-progress-linear
-            color="primary"
-            :value="progress_value"
-            :height="25">
-            <template v-slot:default="{ value }">
-              <strong style="color: white">{{ value }}%</strong>
-            </template>
-          </v-progress-linear>
-          <div class="text-center" style="font-size: 0.875rem">
-            {{ loading_text_data }}
-          </div>
-        </div>
-        <v-text-field
-          v-model="filter_text"
-          append-icon="mdi-magnify"
-          label="전체 필터링"
-          single-line
-          hide-details
-          style="margin-bottom: 2px"
-          @input="onFilterTextChange"></v-text-field>
-        <template>
-          <ag-grid-vue
-            style="height: 537px"
-            class="ag-theme-material"
-            :defaultColDef="ag_grid_vue.default_columns_def"
-            :columnDefs="ag_grid_vue.columns"
-            :rowData="ag_grid_vue.rows"
-            :pagination="ag_grid_vue.ispagination"
-            :localeText="ag_grid_vue.locale_text"
-            :suppressPaginationPanel="true"
-            :paginationPageSize="ag_grid_vue.pagination_size"
-            @grid-ready="onGridReady"
-            @grid-size-changed="onGridSizeChanged"
-            @pagination-changed="onPaginationChanged"
-            suppressBrowserResizeObserver="true"
-            :cacheQuickFilter="true"></ag-grid-vue>
-        </template>
-
-        <v-row class="pagination-bar" align="center" justify="end">
-          <v-col cols="auto">
-            <div style="height: 25px" class="no-drag">
-              페이지 당 보여질 갯수
-            </div>
-          </v-col>
-          <v-col cols="auto" style="width: 80px">
-            <v-select
-              v-model="page_select_box.selected_item"
-              :items="page_select_box.items"
-              class="custom-select"
-              @change="onPageSizeChange"
-              :menu-props="{ top: true, offsetY: true }"></v-select>
-          </v-col>
-          <v-col cols="auto" v-if="ag_grid_vue.total_page" class="no-drag">
-            {{ ag_grid_vue.start_page_idx }} - {{ ag_grid_vue.end_page_idx }} /
-            {{ ag_grid_vue.total_item_cnt }}
-          </v-col>
-          <v-col cols="auto">
-            <v-btn icon @click="first_page" :disabled="is_first_page">
-              <v-icon>mdi-page-first</v-icon>
-            </v-btn>
-            <v-btn icon @click="prev_page" :disabled="is_first_page">
-              <v-icon>mdi-chevron-left</v-icon>
-            </v-btn>
-            <span v-if="ag_grid_vue.total_page" class="no-drag">
-              총
-              <b>{{ ag_grid_vue.total_page }}</b>
-              페이지 중
-              <b>{{ ag_grid_vue.current_page }}</b>
-              페이지
-            </span>
-
-            <v-btn
-              icon
-              @click="next_page"
-              :disabled="is_last_page && !search_btn.is_loading">
-              <v-icon>mdi-chevron-right</v-icon>
-            </v-btn>
-            <v-btn
-              icon
-              @click="last_page"
-              :disabled="is_last_page && !search_btn.is_loading">
-              <v-icon>mdi-page-last</v-icon>
-            </v-btn>
-          </v-col>
-        </v-row>
+        <!-- 메인 테이블 (전체) -->
+        <main-table
+          :rows_data="table_rows"
+          :loading_text_data="loading_text_data"
+          :progress_value="progress_value"
+          :is_loading="search_btn.is_loading"></main-table>
       </v-container>
     </v-main>
     <!-- 설정 다이얼 로그 -->
@@ -276,41 +195,18 @@
     </v-dialog>
 
     <!-- About 다이얼 로그 -->
-    <v-dialog v-model="is_open_about" width="550px">
-      <v-card>
-        <v-toolbar density="compact" :color="theme_color" dense>
-          <v-toolbar-title>
-            <span style="color: white">About</span>
-          </v-toolbar-title>
-        </v-toolbar>
-        <div class="pa-4 text-center">
-          <v-subheader class="justify-center">
-            디시인사이드 초고속 글 검색기
-          </v-subheader>
-          <v-list-item class="justify-center">
-            <img
-              src="https://i.redd.it/dgg8lowfznd61.jpg"
-              alt="https://avatars.githubusercontent.com/u/31213158?v=4"
-              width="400"
-              height="400" />
-          </v-list-item>
-          <v-list-item>
-            <v-list-item-content class="pb-0">
-              <v-list-item-title class="font-weight-bold">
-                <a @click="open_about_link" style="text-decoration: underline">
-                  Copyright 2023. File(pgh268400)
-                  <br />
-                  ALL RIGHTS RESERVED.
-                </a>
-              </v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-        </div>
-      </v-card>
-    </v-dialog>
+    <about-dialog
+      :color="theme_color"
+      :is_open_dialog="is_open_about"
+      v-on:update:value="is_open_about = $event" />
 
     <!-- 저장된 목록 불러오는 다이얼로그 -->
-    <v-dialog v-model="is_open_load" width="550px">
+    <auto-save-all-list
+      :color="theme_color"
+      :is_open_dialog="is_open_load"
+      v-on:update:value="is_open_load = $event"
+      :auto_save_data="auto_save_data"></auto-save-all-list>
+    <!-- <v-dialog v-model="is_open_load" width="550px">
       <v-card>
         <v-toolbar density="compact" :color="theme_color" dense>
           <v-toolbar-title>
@@ -352,22 +248,7 @@
           </v-card>
         </div>
       </v-card>
-    </v-dialog>
-
-    <!-- 자동 저장 목록 다이얼로그 -->
-    <v-dialog v-model="is_open_save_data" width="400px">
-      <v-card>
-        <v-toolbar density="compact" :color="theme_color" dense>
-          <v-toolbar-title>
-            <span style="color: white">AutoSave</span>
-          </v-toolbar-title>
-        </v-toolbar>
-        <div class="pa-4">
-          <!-- 자동 저장 목록 본문 -->
-          구현 준비중입니다.
-        </div>
-      </v-card>
-    </v-dialog>
+    </v-dialog> -->
 
     <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
     <v-navigation-drawer v-model="is_open_drawer" absolute temporary>
@@ -416,10 +297,12 @@ import {
 } from "../types/view";
 import { AgGridVue } from "ag-grid-vue";
 import CustomLinkRenderer from "./components/CustomLinkRenderer.vue";
-import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
 import { Nullable } from "../types/default";
-import AG_GRID_LOCALE_EN from "./locales/locale.en";
 import { shell } from "electron";
+import MainTable from "./components/MainTable.vue";
+import AboutDialog from "./components/AboutDialog.vue";
+import AutoSaveView from "./components/AutoSaveView.vue";
+import AutoSaveAllList from "./components/AutoSaveAllList.vue";
 
 export default Vue.extend({
   name: "App",
@@ -430,10 +313,6 @@ export default Vue.extend({
       save_file_location: "dc_data.json", // 프로그램 설정 파일 이름
       select_box: {
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
-        selected_item: "",
-      },
-      page_select_box: {
-        items: ["10", "20", "30", "40", "50", "모두"],
         selected_item: "",
       },
       auto_save_data: [] as SaveArticleData[],
@@ -451,84 +330,8 @@ export default Vue.extend({
         { title: "정보", icon: "mdi-help-box", action: DrawerAction.About },
       ],
       selected_auto_save_data: null as Nullable<SaveArticleData>,
-      ag_grid_vue: {
-        // ag_grid_vue 의 모든 Column 에 기본 적용되는 옵션
-        default_columns_def: {
-          sortable: true,
-          resizable: true,
-          cellStyle: { fontSize: "0.875rem" },
-          lockVisible: true, // 열 삭제 기능 제거
-          // wrapText: true,
-          // autoHeight: true,
-        },
-        columns: [
-          {
-            field: "번호",
-            width: 95,
-            cellRenderer: "CustomLinkRenderer",
-            cellRendererParams: "",
-            // filter: "agNumberColumnFilter",
-          },
-          { field: "제목", flex: 1, filter: "agTextColumnFilter" },
-          {
-            field: "댓글수",
-            width: 70,
-            // filter: "agNumberColumnFilter"
-          },
-          {
-            field: "작성자",
-            width: 100,
-            // filter: "agTextColumnFilter"
-          },
-          {
-            field: "작성일",
-            width: 70,
-            // filter: "agTextColumnFilter"
-          },
-          {
-            field: "조회수",
-            width: 70,
-            // filter: "agNumberColumnFilter"
-          },
-          { field: "추천", width: 80, filter: "agNumberColumnFilter" },
-        ],
-        rows: [
-          // { 열1: "값1", 열2: "값2", 열3: 값3 },
-        ] as AGGridVueArticle[],
-        locale_text: AG_GRID_LOCALE_EN,
-        grid_api: null as Nullable<GridApi>,
-        grid_column_api: null as Nullable<ColumnApi>,
-        current_page: null as Nullable<number>,
-        total_page: null as Nullable<number>,
-        start_page_idx: null as Nullable<number>,
-        end_page_idx: null as Nullable<number>,
-        total_item_cnt: null as Nullable<number>,
-        pagination_size: 10,
-        ispagination: true,
-      },
 
-      data_table: {
-        headers: [
-          { text: "번호", value: "gall_num" },
-          { text: "제목", value: "gall_tit" },
-          { text: "댓글수", value: "reply_num" },
-          { text: "작성자", value: "gall_writer" },
-          { text: "작성일", value: "gall_date" },
-          { text: "조회수", value: "gall_count" },
-          { text: "추천", value: "gall_recommend" },
-        ],
-        items: [
-          // {
-          //   gall_num: 99999999,
-          //   gall_tit: "1234567890123456789012345678901234567890",
-          //   gall_writer: "ㅇㅇㅇㅇㅇㅇ",
-          //   gall_date: "23/05/15",
-          //   gall_count: 9999,
-          //   gall_recommend: 9999,
-          //   reply_num: 9999,
-          // },
-        ] as Article[],
-      },
+      table_rows: [] as AGGridVueArticle[],
 
       search_btn: {
         is_loading: false,
@@ -537,7 +340,7 @@ export default Vue.extend({
       repeat_cnt: 0,
 
       keyword: "",
-      progress_value: 0,
+      progress_value: "",
       loading_text_data: "",
       // ====
       dragging: false,
@@ -546,11 +349,11 @@ export default Vue.extend({
       startX: 0,
       startY: 0,
       // ====
-      is_open_settings: false,
-      is_open_about: false,
-      is_open_drawer: false,
-      is_open_load: false,
-      is_open_save_data: false,
+      is_open_settings: false, // 설정창 다이얼로그
+      is_open_about: false, // 정보 다이얼로그
+      is_open_drawer: false, // 왼쪽위 석삼자 네비게이션 서랍
+      is_open_load: false, // 불러오기 다이얼로그
+      is_open_save_data: false, // 불러오기 안의 자동 저장 목록 다이얼로그
       filter_text: "",
       settings: {
         program_entire_settings: {
@@ -567,16 +370,20 @@ export default Vue.extend({
     };
   },
   components: {
+    // eslint-disable-next-line vue/no-unused-components
     AgGridVue,
     // eslint-disable-next-line vue/no-unused-components
     CustomLinkRenderer,
+    MainTable,
+    AboutDialog,
+
+    AutoSaveAllList,
   },
 
   // 처음 실행시 실행되는 함수
   async mounted() {
     // 첫 번째 아이템으로 기본값 설정 (v-select)
     this.select_box.selected_item = this.select_box.items[0];
-    this.page_select_box.selected_item = this.page_select_box.items[0];
 
     // 설정 파일이 없다면 생성한다.
     if (!fs.existsSync(this.save_file_location)) {
@@ -682,9 +489,7 @@ export default Vue.extend({
       this.selected_auto_save_data = article;
       this.is_open_save_data = !this.is_open_save_data;
     },
-    open_about_link() {
-      shell.openExternal("https://github.com/pgh268400");
-    },
+
     // 왼쪽 네비게이션 서랍 메뉴 클릭 시 실행되는 함수
     async drawer_item_click(action: DrawerAction) {
       // console.log(action);
@@ -692,13 +497,18 @@ export default Vue.extend({
         this.is_open_settings = true;
       } else if (action === DrawerAction.Load) {
         // 불러오기 버튼을 누르면 데이터를 준비한다.
-        const data = await fs.promises.readFile("dc_data.json", "utf-8");
-        const parsed_data: SaveData = JSON.parse(data);
-        if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
-          this.auto_save_data = parsed_data.auto_save;
-        } else {
-          this.auto_save_data = [];
+        try {
+          const data = await fs.promises.readFile("dc_data.json", "utf-8");
+          const parsed_data: SaveData = JSON.parse(data);
+          if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
+            this.auto_save_data = parsed_data.auto_save;
+          } else {
+            this.auto_save_data = [];
+          }
+        } catch (error: any) {
+          console.log(error);
         }
+
         this.is_open_load = true;
       } else if (action === DrawerAction.About) {
         this.is_open_about = true;
@@ -715,71 +525,6 @@ export default Vue.extend({
     submit_settings() {
       // dialog 닫기
       this.is_open_settings = false;
-    },
-    onFilterTextChange() {
-      if (this.ag_grid_vue.grid_api) {
-        setTimeout(() => {
-          this.ag_grid_vue.grid_api?.setQuickFilter(this.filter_text);
-        }, 0);
-      }
-    },
-    onPageSizeChange() {
-      if (this.page_select_box.selected_item != "모두") {
-        this.ag_grid_vue.ispagination = true;
-        this.ag_grid_vue.pagination_size = parseInt(
-          this.page_select_box.selected_item
-        );
-      } else {
-        this.ag_grid_vue.ispagination = false;
-      }
-    },
-    onPaginationChanged() {
-      if (this.ag_grid_vue.grid_api) {
-        // 현재 페이지가 0이 아닐때만 렌더링
-        this.ag_grid_vue.current_page =
-          this.ag_grid_vue.grid_api.paginationGetCurrentPage() + 1;
-        this.ag_grid_vue.total_page =
-          this.ag_grid_vue.grid_api.paginationGetTotalPages();
-
-        this.ag_grid_vue.total_item_cnt =
-          this.ag_grid_vue.grid_api.getDisplayedRowCount();
-
-        const row_count = this.ag_grid_vue.total_item_cnt;
-        const last_grid_idx = row_count - 1;
-        const current_page = this.ag_grid_vue.current_page;
-        const page_size = this.ag_grid_vue.grid_api.paginationGetPageSize();
-        let start_page_idx = (current_page - 1) * page_size;
-        let end_page_idx = current_page * page_size - 1;
-
-        if (end_page_idx > last_grid_idx) {
-          end_page_idx = last_grid_idx;
-        }
-
-        this.ag_grid_vue.start_page_idx = start_page_idx + 1;
-        this.ag_grid_vue.end_page_idx = end_page_idx + 1;
-      }
-    },
-    first_page() {
-      this.ag_grid_vue.grid_api?.paginationGoToFirstPage();
-    },
-    last_page() {
-      this.ag_grid_vue.grid_api?.paginationGoToLastPage();
-    },
-    prev_page() {
-      this.ag_grid_vue.grid_api?.paginationGoToPreviousPage();
-    },
-    next_page() {
-      this.ag_grid_vue.grid_api?.paginationGoToNextPage();
-    },
-    onGridSizeChanged(params: any) {
-      // params.api.sizeColumnsToFit();
-    },
-    onGridReady(params: GridReadyEvent) {
-      // console.log("ready");
-      this.ag_grid_vue.grid_api = params.api;
-      this.ag_grid_vue.grid_column_api = params.columnApi;
-
-      // params.api.sizeColumnsToFit(); // 열 너비 자동 조절
     },
     search_keypress(e: KeyboardEvent) {
       if (e.key === "Enter") {
@@ -815,11 +560,6 @@ export default Vue.extend({
     end_drag() {
       this.dragging = false;
     },
-    open_link(gallary_id: string, no: string) {
-      // 링크 클릭시 해당 게시글로 크롬 브라우저 실행해 이동
-      // ipc 이용하여 일렉트론 서버와 통신
-      ipcRenderer.send("open-link", gallary_id, no);
-    },
     string_to_query(selected_items: string): string {
       const query_match_ui: any = {
         "제목+내용": "search_subject_memo",
@@ -850,7 +590,7 @@ export default Vue.extend({
       // 검색 버튼 누르면 기존 검색 결과 초기화
       if (this.settings.user_preferences.clear_data_on_search) {
         // this.data_table.items = [];
-        this.ag_grid_vue.rows = [];
+        this.table_rows = [];
       }
 
       this.search_btn.is_loading = true;
@@ -900,11 +640,10 @@ export default Vue.extend({
           }
 
           console.timeEnd("배열 삽입 시간 : ");
+          this.table_rows = items; //데이터 바인딩 (표 반영)
 
-          // 데이터 바인딩
-          // this.data_table.items = items;
-          this.ag_grid_vue.rows = items;
-          // console.log(this.data_table.items);
+          // 버튼 로딩 완료 반영
+          this.search_btn.is_loading = false;
 
           // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
           if (this.settings.auto_save.auto_save_result) {
@@ -955,14 +694,12 @@ export default Vue.extend({
               );
             }
           }
-
-          this.search_btn.is_loading = false;
         }
       );
 
       ipcRenderer.on(
         "web-request-progress",
-        (event, progress: number, status: string) => {
+        (event, progress: string, status: string) => {
           this.progress_value = progress;
           this.loading_text_data = status;
         }
@@ -978,26 +715,6 @@ export default Vue.extend({
       set(value) {
         this.$store.commit("set_gallary_id", value);
       },
-    },
-    is_first_page() {
-      if (
-        this.ag_grid_vue.current_page === 1 &&
-        this.ag_grid_vue.start_page_idx === 1
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    },
-    is_last_page() {
-      if (
-        this.ag_grid_vue.current_page === this.ag_grid_vue.total_page &&
-        this.ag_grid_vue.end_page_idx === this.ag_grid_vue.total_item_cnt
-      ) {
-        return true;
-      } else {
-        return false;
-      }
     },
   },
   watch: {
@@ -1016,33 +733,8 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss">
-@import "~ag-grid-community/styles/ag-grid.css";
-// @import "~ag-grid-community/styles/ag-theme-alpine.css";
-@import "~ag-grid-community/styles/ag-theme-material.css";
-</style>
-
 <style scoped>
 .v-sheet.v-card {
   border-radius: 0px;
-}
-
-.ag-theme-material {
-  --ag-cell-horizontal-padding: 16px;
-  border-bottom: none;
-}
-
-.pagination-bar {
-  font-size: 0.75rem;
-  margin-top: -25px;
-  justify-content: flex-end;
-}
-
-.custom-select {
-  font-size: 0.75rem;
-}
-
-.no-drag {
-  user-select: none;
 }
 </style>

@@ -130,7 +130,7 @@ app.on("ready", async () => {
         search_type,
         keyword,
         repeat_cnt,
-        (progress: number, status: string) => {
+        (progress: string, status: string) => {
           event.sender.send("web-request-progress", progress, status);
         }
       );

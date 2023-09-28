@@ -1,11 +1,9 @@
-import { Nullable } from '@/types/default'; import { Nullable } from
-'@/types/default';
 <!-- 전체 필터링, ag-grid-vue, 페이지 당 보여질 갯수를 한꺼번에 묶어놓은 컴포넌트 -->
 
 <template>
   <div>
     <!-- 검색 중에만 프로그래스바, 설명 표시 -->
-    <div v-if="search_btn.is_loading">
+    <div v-if="is_loading">
       <v-progress-linear color="primary" :value="progress_value" :height="25">
         <template v-slot:default="{ value }">
           <strong style="color: white">{{ value }}%</strong>
@@ -29,7 +27,7 @@ import { Nullable } from '@/types/default'; import { Nullable } from
         class="ag-theme-material"
         :defaultColDef="ag_grid_vue.default_columns_def"
         :columnDefs="ag_grid_vue.columns"
-        :rowData="ag_grid_vue.rows"
+        :rowData="rows_data"
         :pagination="ag_grid_vue.is_pagination"
         :localeText="ag_grid_vue.locale_text"
         :suppressPaginationPanel="true"
@@ -72,16 +70,10 @@ import { Nullable } from '@/types/default'; import { Nullable } from
           페이지
         </span>
 
-        <v-btn
-          icon
-          @click="next_page"
-          :disabled="is_last_page && !search_btn.is_loading">
+        <v-btn icon @click="next_page" :disabled="is_last_page && !is_loading">
           <v-icon>mdi-chevron-right</v-icon>
         </v-btn>
-        <v-btn
-          icon
-          @click="last_page"
-          :disabled="is_last_page && !search_btn.is_loading">
+        <v-btn icon @click="last_page" :disabled="is_last_page && !is_loading">
           <v-icon>mdi-page-last</v-icon>
         </v-btn>
       </v-col>
@@ -94,12 +86,17 @@ import { Nullable } from "@/types/default";
 import AG_GRID_LOCALE_EN from "../locales/locale.en";
 import { AGGridVueArticle } from "@/types/view";
 import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
-export default {
+import { defineComponent } from "vue";
+import { AgGridVue } from "ag-grid-vue";
+
+// 컴포넌트 만들 시 defineComponent() 로 반드시 묶어줘야 한다.
+export default defineComponent({
   // 상위 컴포넌트에서 전달받는 props
   props: {
-    progress_value: Number, // 프로그레스바 표시를 위한 변수
+    progress_value: String, // 프로그레스바 표시를 위한 변수
     loading_text_data: String, // 로딩중에 표시할 텍스트
-    rows: {
+    is_loading: Boolean, // 검색 버튼에서 로딩중인지 표시
+    rows_data: {
       required: true,
       type: Array as () => AGGridVueArticle[],
     },
@@ -108,11 +105,6 @@ export default {
   // 저장하는 데이터
   data() {
     return {
-      // 검색 버튼에서 로딩 중인지 표시
-      search_btn: {
-        is_loading: false,
-      },
-
       // 페이지 당 보여질 갯수
       page_select_box: {
         items: ["10", "20", "30", "40", "50", "모두"],
@@ -177,7 +169,7 @@ export default {
       },
 
       filter_text: "", // 전체 필터링에 넣을 텍스트
-    };
+    } as any;
   },
   // 계산된 속성
   computed: {
@@ -204,6 +196,12 @@ export default {
       }
     },
   },
+  // 감시
+  // watch: {
+  //   progress_value() {
+  //     console.log(this.progress_value);
+  //   },
+  // },
   // 사용하는 함수
   methods: {
     // 맨 첫페이지 << 버튼
@@ -280,7 +278,39 @@ export default {
       }
     },
   },
-};
+  mounted() {
+    // 첫 번째 아이템으로 기본값 설정
+    this.page_select_box.selected_item = this.page_select_box.items[0];
+  },
+  components: {
+    AgGridVue,
+  },
+});
 </script>
 
-<style scoped></style>
+<style lang="scss">
+@import "~ag-grid-community/styles/ag-grid.css";
+// @import "~ag-grid-community/styles/ag-theme-alpine.css";
+@import "~ag-grid-community/styles/ag-theme-material.css";
+</style>
+
+<style scoped>
+.pagination-bar {
+  font-size: 0.75rem;
+  margin-top: -25px;
+  justify-content: flex-end;
+}
+
+.custom-select {
+  font-size: 0.75rem;
+}
+
+.ag-theme-material {
+  --ag-cell-horizontal-padding: 16px;
+  border-bottom: none;
+}
+
+.no-drag {
+  user-select: none;
+}
+</style>
