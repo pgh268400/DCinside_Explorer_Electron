@@ -40,6 +40,14 @@
     </template>
 
     <v-row class="pagination-bar" align="center" justify="end">
+      <v-col>
+        <v-btn
+          color="primary"
+          v-if="ag_grid_vue.total_page"
+          style="height: 29px; padding: 10px 10px">
+          검색 저장
+        </v-btn>
+      </v-col>
       <v-col cols="auto">
         <div style="height: 25px" class="no-drag">페이지 당 보여질 갯수</div>
       </v-col>
@@ -88,7 +96,7 @@ import { AGGridVueArticle } from "@/types/view";
 import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
 import { defineComponent } from "vue";
 import { AgGridVue } from "ag-grid-vue";
-
+import CustomLinkRenderer from "./CustomLinkRenderer.vue";
 // 컴포넌트 만들 시 defineComponent() 로 반드시 묶어줘야 한다.
 export default defineComponent({
   // 상위 컴포넌트에서 전달받는 props
@@ -105,6 +113,7 @@ export default defineComponent({
   // 저장하는 데이터
   data() {
     return {
+      theme_color: "#3B4890",
       // 페이지 당 보여질 갯수
       page_select_box: {
         items: ["10", "20", "30", "40", "50", "모두"],
@@ -283,6 +292,9 @@ export default defineComponent({
     this.page_select_box.selected_item = this.page_select_box.items[0];
   },
   components: {
+    // 갤러리 번호 클릭시 새 탭으로 열기 위한 커스텀 컴포넌트 (필수)
+    // eslint-disable-next-line vue/no-unused-components
+    CustomLinkRenderer,
     AgGridVue,
   },
 });

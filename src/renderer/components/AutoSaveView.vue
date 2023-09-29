@@ -20,7 +20,6 @@ export default defineComponent({
     is_open_dialog: Boolean,
     color: String,
     table_rows: {
-      required: true,
       type: Array as () => AGGridVueArticle[],
     },
   },

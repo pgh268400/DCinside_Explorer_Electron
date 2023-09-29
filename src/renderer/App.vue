@@ -295,13 +295,9 @@ import {
   SaveData,
   Settings,
 } from "../types/view";
-import { AgGridVue } from "ag-grid-vue";
-import CustomLinkRenderer from "./components/CustomLinkRenderer.vue";
 import { Nullable } from "../types/default";
-import { shell } from "electron";
 import MainTable from "./components/MainTable.vue";
 import AboutDialog from "./components/AboutDialog.vue";
-import AutoSaveView from "./components/AutoSaveView.vue";
 import AutoSaveAllList from "./components/AutoSaveAllList.vue";
 
 export default Vue.extend({
@@ -370,13 +366,8 @@ export default Vue.extend({
     };
   },
   components: {
-    // eslint-disable-next-line vue/no-unused-components
-    AgGridVue,
-    // eslint-disable-next-line vue/no-unused-components
-    CustomLinkRenderer,
     MainTable,
     AboutDialog,
-
     AutoSaveAllList,
   },
 
@@ -661,6 +652,11 @@ export default Vue.extend({
             }
 
             const limit = this.settings.auto_save.max_auto_save; // 자동 저장 갯수 제한
+
+            // 저장하려는 데이터 내용이 비었으면 자동 저장하지 않는다.
+            if (items.length === 0) {
+              return;
+            }
 
             // 갯수 제한에 걸리면 맨 뒷 요소를 제거함 (추가는 뒤에다가 계속함)
             if (parsed_data.auto_save.length >= limit) {

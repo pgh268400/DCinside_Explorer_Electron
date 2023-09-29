@@ -4,7 +4,7 @@
       <v-card>
         <v-toolbar density="compact" :color="color" dense>
           <v-toolbar-title>
-            <span style="color: white">Loading</span>
+            <span style="color: white">AutoSaveAllList</span>
           </v-toolbar-title>
         </v-toolbar>
         <div class="pa-4">
