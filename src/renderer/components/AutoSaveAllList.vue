@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-dialog v-model="sync_is_open_dialog" width="550px">
+    <v-dialog v-model="sync_is_open_dialog" width="500px">
       <v-card>
         <v-toolbar density="compact" :color="color" dense>
           <v-toolbar-title>
@@ -44,18 +44,18 @@
       </v-card>
     </v-dialog>
     <!-- 자동 저장 목록 실제로 보는 다이얼로그 -->
-    <auto-save-view
+    <save-view
       :is_open_dialog="is_open_save_data"
       :color="color"
       v-on:update:value="is_open_save_data = $event"
-      :table_rows="selected_auto_save_data?.article_data"></auto-save-view>
+      :table_rows="selected_auto_save_data?.article_data"></save-view>
   </div>
 </template>
 
 <script lang="ts">
 import { Nullable } from "@/types/default";
 import { SaveArticleData } from "@/types/view";
-import AutoSaveView from "./AutoSaveView.vue";
+import SaveView from "./SaveView.vue";
 import { defineComponent } from "vue";
 export default defineComponent({
   props: {
@@ -90,7 +90,7 @@ export default defineComponent({
     },
   },
   components: {
-    AutoSaveView,
+    SaveView,
   },
 });
 </script>

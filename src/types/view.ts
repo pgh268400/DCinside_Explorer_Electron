@@ -19,6 +19,7 @@ interface SaveArticleData {
 interface SaveData extends UserInput {
   settings: Settings;
   auto_save?: SaveArticleData[];
+  manual_save?: SaveArticleData[];
 }
 
 // 설정 다이얼로그 저장시 사용할 인터페이스 타입 정의

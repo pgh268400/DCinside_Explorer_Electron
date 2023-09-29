@@ -68,7 +68,8 @@
           :rows_data="table_rows"
           :loading_text_data="loading_text_data"
           :progress_value="progress_value"
-          :is_loading="search_btn.is_loading"></main-table>
+          :is_loading="search_btn.is_loading"
+          @manual_save="save_manual_data"></main-table>
       </v-container>
     </v-main>
     <!-- 설정 다이얼 로그 -->
@@ -201,11 +202,11 @@
       v-on:update:value="is_open_about = $event" />
 
     <!-- 저장된 목록 불러오는 다이얼로그 -->
-    <auto-save-all-list
+    <!-- <auto-save-all-list
       :color="theme_color"
       :is_open_dialog="is_open_load"
       v-on:update:value="is_open_load = $event"
-      :auto_save_data="auto_save_data"></auto-save-all-list>
+      :auto_save_data="auto_save_data"></auto-save-all-list> -->
     <!-- <v-dialog v-model="is_open_load" width="550px">
       <v-card>
         <v-toolbar density="compact" :color="theme_color" dense>
@@ -250,6 +251,10 @@
       </v-card>
     </v-dialog> -->
 
+    <load-interface
+      :is_open_dialog="is_open_load"
+      v-on:update:value="is_open_load = $event"
+      :color="theme_color"></load-interface>
     <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
     <v-navigation-drawer v-model="is_open_drawer" absolute temporary>
       <v-list-item>
@@ -298,7 +303,7 @@ import {
 import { Nullable } from "../types/default";
 import MainTable from "./components/MainTable.vue";
 import AboutDialog from "./components/AboutDialog.vue";
-import AutoSaveAllList from "./components/AutoSaveAllList.vue";
+import LoadInterface from "./components/LoadInterface.vue";
 
 export default Vue.extend({
   name: "App",
@@ -368,7 +373,7 @@ export default Vue.extend({
   components: {
     MainTable,
     AboutDialog,
-    AutoSaveAllList,
+    LoadInterface,
   },
 
   // 처음 실행시 실행되는 함수
@@ -402,6 +407,7 @@ export default Vue.extend({
                 },
               } as Settings,
               auto_save: [],
+              manual_save: [],
             } as SaveData,
             null,
             2
@@ -429,53 +435,98 @@ export default Vue.extend({
 
   // 종료 직전에 실행되는 함수
   async beforeDestroy() {
-    // 종료 직전에 프로그램의 입력 데이터를 저장한다.
-
-    // 현재 dc_data.json 에 저장된 데이터를 불러온다.
-    // 자동 저장된 데이터가 있다면 불러오고 없다면 빈 배열을 생성한다.
-    let article_data: SaveArticleData[];
-    const current_data = await fs.promises.readFile("dc_data.json", "utf-8");
-    const parsed_data: SaveData = JSON.parse(current_data);
-    if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
-      article_data = parsed_data.auto_save;
-    } else {
-      article_data = [];
-    }
-
-    const data: SaveData = {
-      search_type: this.select_box.selected_item,
-      repeat_cnt: this.repeat_cnt,
-      gallary_id: this.gallary_id,
-      keyword: this.keyword,
-      settings: {
-        program_entire_settings: {
-          max_parallel: this.settings.program_entire_settings.max_parallel,
-        },
-        user_preferences: {
-          clear_data_on_search:
-            this.settings.user_preferences.clear_data_on_search,
-        },
-        auto_save: {
-          auto_save_result: this.settings.auto_save.auto_save_result,
-          max_auto_save: this.settings.auto_save.max_auto_save,
-        },
-      } as Settings,
-      auto_save: article_data,
-    };
-
-    try {
-      await fs.promises.writeFile(
-        this.save_file_location,
-        // 들여쓰기까지 포함해 깔끔하게 저장
-        JSON.stringify(data, null, 2)
-      );
-      console.log(data, "Data saved successfully");
-    } catch (err) {
-      console.error(err);
-    }
+    await this.save_data_on_disk();
   },
 
   methods: {
+    async save_manual_data() {
+      // 먼저 설정 파일을 불러온다
+      const data = (
+        await fs.promises.readFile(this.save_file_location)
+      ).toString();
+
+      // data를 json으로 파싱한다
+      const parsed_data: SaveData = JSON.parse(data);
+
+      if (!parsed_data.manual_save) {
+        parsed_data.manual_save = [];
+      }
+
+      // 현재 검색한 내용을 기록한다.
+      parsed_data.manual_save.push({
+        user_input: {
+          search_type: this.select_box.selected_item,
+          repeat_cnt: this.repeat_cnt,
+          gallary_id: this.gallary_id,
+          keyword: this.keyword,
+        },
+        article_data: this.table_rows,
+      });
+
+      // parsed_data 객체를 JSON 문자열로 변환
+      const json_data = JSON.stringify(parsed_data, null, 2);
+
+      try {
+        // JSON 데이터를 파일에 씁니다.
+        await fs.promises.writeFile(this.save_file_location, json_data);
+        console.log(
+          "[MANUAL SAVE] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+        );
+      } catch (error) {
+        console.error(
+          "[MANUAL SAVE] 데이터를 저장하는 중 오류가 발생했습니다.",
+          error
+        );
+      }
+    },
+    async save_data_on_disk() {
+      // 종료 직전에 프로그램의 입력 데이터를 저장한다.
+      // 현재 dc_data.json 에 저장된 데이터를 불러온다.
+      let auto_article_data: SaveArticleData[] = [];
+      const current_data = await fs.promises.readFile("dc_data.json", "utf-8");
+      const parsed_data: SaveData = JSON.parse(current_data);
+      if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
+        auto_article_data = parsed_data.auto_save;
+      }
+
+      let manual_article_data: SaveArticleData[] = [];
+      if (parsed_data.manual_save && parsed_data.manual_save.length !== 0) {
+        manual_article_data = parsed_data.manual_save;
+      }
+
+      const data: SaveData = {
+        search_type: this.select_box.selected_item,
+        repeat_cnt: this.repeat_cnt,
+        gallary_id: this.gallary_id,
+        keyword: this.keyword,
+        settings: {
+          program_entire_settings: {
+            max_parallel: this.settings.program_entire_settings.max_parallel,
+          },
+          user_preferences: {
+            clear_data_on_search:
+              this.settings.user_preferences.clear_data_on_search,
+          },
+          auto_save: {
+            auto_save_result: this.settings.auto_save.auto_save_result,
+            max_auto_save: this.settings.auto_save.max_auto_save,
+          },
+        } as Settings,
+        auto_save: auto_article_data,
+        manual_save: manual_article_data,
+      };
+
+      try {
+        await fs.promises.writeFile(
+          this.save_file_location,
+          // 들여쓰기까지 포함해 깔끔하게 저장
+          JSON.stringify(data, null, 2)
+        );
+        console.log(data, "Data saved successfully");
+      } catch (err) {
+        console.error(err);
+      }
+    },
     click_auto_save_item(article: SaveArticleData) {
       this.selected_auto_save_data = article;
       this.is_open_save_data = !this.is_open_save_data;
@@ -487,19 +538,6 @@ export default Vue.extend({
       if (action === DrawerAction.Settings) {
         this.is_open_settings = true;
       } else if (action === DrawerAction.Load) {
-        // 불러오기 버튼을 누르면 데이터를 준비한다.
-        try {
-          const data = await fs.promises.readFile("dc_data.json", "utf-8");
-          const parsed_data: SaveData = JSON.parse(data);
-          if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
-            this.auto_save_data = parsed_data.auto_save;
-          } else {
-            this.auto_save_data = [];
-          }
-        } catch (error: any) {
-          console.log(error);
-        }
-
         this.is_open_load = true;
       } else if (action === DrawerAction.About) {
         this.is_open_about = true;

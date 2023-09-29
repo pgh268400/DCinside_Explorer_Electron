@@ -43,8 +43,9 @@
       <v-col>
         <v-btn
           color="primary"
-          v-if="ag_grid_vue.total_page"
-          style="height: 29px; padding: 10px 10px">
+          v-if="!is_hide_save_button && ag_grid_vue.total_page"
+          style="height: 29px; padding: 10px 10px"
+          @click="save_search_data_manually()">
           검색 저장
         </v-btn>
       </v-col>
@@ -108,6 +109,11 @@ export default defineComponent({
       required: true,
       type: Array as () => AGGridVueArticle[],
     },
+    is_hide_save_button: {
+      required: false,
+      type: Boolean,
+      default: false,
+    }, //왼쪽 아래 저장 버튼 숨기기 여부
   },
 
   // 저장하는 데이터
@@ -213,6 +219,27 @@ export default defineComponent({
   // },
   // 사용하는 함수
   methods: {
+    save_search_data_manually() {
+      // 검색 저장 버튼 클릭시 호출되는 함수
+
+      // 저장을 위해 이벤트를 상위로 전파시킨다.
+      this.$emit("manual_save");
+
+      this.$toast("저장이 완료되었습니다", {
+        position: "bottom-center",
+        timeout: 718,
+        closeOnClick: true,
+        pauseOnFocusLoss: true,
+        pauseOnHover: false,
+        draggable: true,
+        draggablePercent: 0.6,
+        showCloseButtonOnHover: true,
+        hideProgressBar: true,
+        closeButton: "button",
+        icon: true,
+        rtl: false,
+      });
+    },
     // 맨 첫페이지 << 버튼
     first_page() {
       this.ag_grid_vue.grid_api?.paginationGoToFirstPage();

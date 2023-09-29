@@ -6,9 +6,19 @@ import router from "./router";
 import store from "./store";
 import vuetify from "./plugins/vuetify";
 
+import Toast from "vue-toastification";
+// Import the CSS or use your own!
+import "vue-toastification/dist/index.css";
+
 Vue.config.productionTip = false;
 
-const vueApp = new Vue({
+const options = {
+  transition: "Vue-Toastification__fade",
+};
+
+Vue.use(Toast, options);
+
+const app = new Vue({
   router,
   store,
   vuetify,
@@ -17,4 +27,4 @@ const vueApp = new Vue({
 
 // 이걸 추가해야 Electron 이 통째로 종료될 때 Vue의 destroy 부분이 제대로 실행됨.
 // https://github.com/nklayman/vue-cli-plugin-electron-builder/issues/389
-window.addEventListener("beforeunload", () => vueApp.$destroy());
+window.addEventListener("beforeunload", () => app.$destroy());
