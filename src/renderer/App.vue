@@ -205,7 +205,9 @@
     <load-interface
       :is_open_dialog="is_open_load"
       v-on:update:value="is_open_load = $event"
-      :color="theme_color"></load-interface>
+      :color="theme_color"
+      :auto_save_data="save_data.auto_save"
+      :manual_save_data="save_data.manual_save"></load-interface>
 
     <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
     <v-navigation-drawer v-model="is_open_drawer" absolute temporary>
