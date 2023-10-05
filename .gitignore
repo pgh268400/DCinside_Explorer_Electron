@@ -27,3 +27,4 @@ pnpm-debug.log*
 # save file
 /result.json
 /data.json
+dc_data.json

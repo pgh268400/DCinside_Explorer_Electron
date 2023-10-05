@@ -105,15 +105,19 @@ export default defineComponent({
     progress_value: String, // 프로그레스바 표시를 위한 변수
     loading_text_data: String, // 로딩중에 표시할 텍스트
     is_loading: Boolean, // 검색 버튼에서 로딩중인지 표시
+
+    // 데이터 표시를 위한 props
     rows_data: {
       required: true,
       type: Array as () => AGGridVueArticle[],
     },
+
+    //왼쪽 아래 저장 버튼 숨기기 여부
     is_hide_save_button: {
       required: false,
       type: Boolean,
       default: false,
-    }, //왼쪽 아래 저장 버튼 숨기기 여부
+    },
   },
 
   // 저장하는 데이터
@@ -211,13 +215,6 @@ export default defineComponent({
       }
     },
   },
-  // 감시
-  // watch: {
-  //   progress_value() {
-  //     console.log(this.progress_value);
-  //   },
-  // },
-  // 사용하는 함수
   methods: {
     save_search_data_manually() {
       // 검색 저장 버튼 클릭시 호출되는 함수

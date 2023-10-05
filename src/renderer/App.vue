@@ -380,6 +380,11 @@ export default Vue.extend({
       this.select_box.selected_item = parsed_data.search_type;
       this.settings = parsed_data.settings;
 
+      // 설정 파일을 불러오면서 저장 데이터도 반영한다
+      // (위에서 auto_save, manual_save는 없으면 무조건 생성하므로 null이 될 수 없다.)
+      this.save_data.auto_save = parsed_data.auto_save as SaveArticleData[];
+      this.save_data.manual_save = parsed_data.manual_save as SaveArticleData[];
+
       console.log("설정 파일을 성공적으로 불러왔습니다.");
     } catch (err) {
       console.error(err);
@@ -599,8 +604,6 @@ export default Vue.extend({
 
       // 버튼에 로딩 상태 반영
       this.search_btn.is_loading = true;
-
-      console.log(typeof this.repeat_cnt);
 
       // 웹 요청 보내기
       ipcRenderer.send(IPCChannel.WEB_REQUEST, {
