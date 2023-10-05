@@ -13,7 +13,7 @@ import {
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import { DCAsyncParser } from "./modules/dcparser";
-import { DCWebRequest } from "@/types/ipc";
+import { DCWebRequest, IPCChannel } from "@/types/ipc";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -119,7 +119,7 @@ app.on("ready", async () => {
   let parser: DCAsyncParser;
 
   // 웹 요청 처리 (검색)
-  ipcMain.on("web-request", async (event, arg: DCWebRequest) => {
+  ipcMain.on(IPCChannel.WEB_REQUEST, async (event, arg: DCWebRequest) => {
     const { id, repeat_cnt, keyword, search_type, option } = arg;
     try {
       // const parser = await DCAsyncParser.create(id);
@@ -131,42 +131,34 @@ app.on("ready", async () => {
         keyword,
         repeat_cnt,
         (progress: string, status: string) => {
-          event.sender.send("web-request-progress", progress, status);
+          event.sender.send(IPCChannel.WEB_REQUEST_PROGRESS, progress, status);
         }
       );
 
       // await fs.promises.writeFile("result.json", JSON.stringify(result));
-      event.sender.send("web-request-response", result);
+      event.sender.send(IPCChannel.WEB_RESPONSE, result);
     } catch (e: any) {
       console.error(e);
-      event.sender.send("web-request-response", []);
+      event.sender.send(IPCChannel.WEB_RESPONSE, []);
     }
   });
 
   // 종료 요청 처리
-  ipcMain.on("close-me", (event, arg) => {
+  ipcMain.on(IPCChannel.CLOSE_ME, (event, arg) => {
     app.quit();
   });
 
   // 갤러리 ID 클릭 시 해당 갤러리 페이지 여는 IPC
-  ipcMain.on("open-link", async (event, gallary_id: string, no: string) => {
-    if (parser) {
-      const g_type = parser.get_garllery_type();
-      const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallary_id}&no=${no}`;
-      shell.openExternal(url);
+  ipcMain.on(
+    IPCChannel.OPEN_LINK,
+    async (event, gallary_id: string, no: string) => {
+      if (parser) {
+        const g_type = parser.get_garllery_type();
+        const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallary_id}&no=${no}`;
+        shell.openExternal(url);
+      }
     }
-  });
-
-  // 요청 제한 설정 (생각해보니 검색할때마다 객체를 새로 생성해서 이렇게 setter 을 쓰는게 의미가 없음.)
-  // ipcMain.on("set-request-limit", async (event, request_limit: number) => {
-  //   if (parser) {
-  //     console.log("set-request-limit", request_limit);
-  //     // 타입 출력
-  //     console.log(typeof request_limit);
-  //     // request_limit 타입 출력
-  //     parser.set_request_limit(request_limit);
-  //   }
-  // });
+  );
 });
 
 // Exit cleanly on request from parent process in development mode.

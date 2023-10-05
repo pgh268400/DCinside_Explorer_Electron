@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 
-// main / renderer 간 통신을 위한 타입 정의
+// main - renderer 간 통신을 위한 타입 정의
 
 import { CreateOption, Search } from "./dcinside";
 
@@ -12,4 +12,14 @@ interface DCWebRequest {
   option: CreateOption;
 }
 
-export { DCWebRequest };
+// ipc 통신간 사용하는 문자열 이름
+enum IPCChannel {
+  WEB_REQUEST = "web-request",
+  WEB_RESPONSE = "web-response",
+  WEB_REQUEST_PROGRESS = "web-request-progress",
+  CLOSE_ME = "close-me",
+  OPEN_LINK = "open-link",
+  SET_REQUEST_LIMIT = "set-request-limit",
+}
+
+export { DCWebRequest, IPCChannel };

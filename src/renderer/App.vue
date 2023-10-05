@@ -201,60 +201,12 @@
       :is_open_dialog="is_open_about"
       v-on:update:value="is_open_about = $event" />
 
-    <!-- 저장된 목록 불러오는 다이얼로그 -->
-    <!-- <auto-save-all-list
-      :color="theme_color"
-      :is_open_dialog="is_open_load"
-      v-on:update:value="is_open_load = $event"
-      :auto_save_data="auto_save_data"></auto-save-all-list> -->
-    <!-- <v-dialog v-model="is_open_load" width="550px">
-      <v-card>
-        <v-toolbar density="compact" :color="theme_color" dense>
-          <v-toolbar-title>
-            <span style="color: white">Loading</span>
-          </v-toolbar-title>
-        </v-toolbar>
-        <div class="pa-4">
-          <v-list-item two-line>
-            <v-list-item-content>
-              <v-list-item-title class="text-h5">
-                자동 저장 목록
-              </v-list-item-title>
-              <v-list-item-subtitle>저장 목록 확인</v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
-          <v-card
-            v-for="(article, index) in auto_save_data"
-            :key="index"
-            shaped
-            elevation="3"
-            class="mb-5 ml-2 mr-2"
-            @click="click_auto_save_item(article)">
-            <v-list-item>
-              <v-list-item-content>
-                <v-list-item-title class="text-h6">
-                  갤러리 : {{ article.user_input.gallary_id }}
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  검색 옵션 : {{ article.user_input.search_type }}
-                </v-list-item-subtitle>
-                <v-list-item-subtitle>
-                  반복 횟수 : {{ article.user_input.repeat_cnt }}
-                </v-list-item-subtitle>
-                <v-list-item-subtitle>
-                  검색어 : {{ article.user_input.keyword }}
-                </v-list-item-subtitle>
-              </v-list-item-content>
-            </v-list-item>
-          </v-card>
-        </div>
-      </v-card>
-    </v-dialog> -->
-
+    <!-- 불러오기 다이얼 로그 -->
     <load-interface
       :is_open_dialog="is_open_load"
       v-on:update:value="is_open_load = $event"
       :color="theme_color"></load-interface>
+
     <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
     <v-navigation-drawer v-model="is_open_drawer" absolute temporary>
       <v-list-item>
@@ -288,10 +240,10 @@
 </template>
 
 <script lang="ts">
-import { ipcRenderer, remote } from "electron";
+import { ipcRenderer, IpcRendererEvent, remote } from "electron";
 import Vue from "vue";
 import { Article } from "../types/dcinside";
-import { DCWebRequest } from "../types/ipc";
+import { DCWebRequest, IPCChannel } from "../types/ipc";
 import fs from "fs";
 import {
   AGGridVueArticle,
@@ -328,9 +280,21 @@ export default Vue.extend({
           icon: "mdi-file",
           action: DrawerAction.Load,
         },
-        { title: "정보", icon: "mdi-help-box", action: DrawerAction.About },
+        {
+          title: "정보",
+          icon: "mdi-help-box",
+          action: DrawerAction.About,
+        },
       ],
       selected_auto_save_data: null as Nullable<SaveArticleData>,
+
+      // RAM 상에서 저장될 자동 / 수동 저장 데이터
+      // 원래는 불러올때마다 파일에서 불러왔지만 그러면
+      // 속도저하가 커서 불러올때는 RAM에서 보여주고, 저장은 파일에 저장하는 방식으로 변경
+      save_data: {
+        auto_save: [] as SaveArticleData[],
+        manual_save: [] as SaveArticleData[],
+      },
 
       table_rows: [] as AGGridVueArticle[],
 
@@ -343,13 +307,14 @@ export default Vue.extend({
       keyword: "",
       progress_value: "",
       loading_text_data: "",
-      // ====
+
+      // =========================================================================
       dragging: false,
       offsetX: 0,
       offsetY: 0,
       startX: 0,
       startY: 0,
-      // ====
+      // =========================================================================
       is_open_settings: false, // 설정창 다이얼로그
       is_open_about: false, // 정보 다이얼로그
       is_open_drawer: false, // 왼쪽위 석삼자 네비게이션 서랍
@@ -378,56 +343,42 @@ export default Vue.extend({
 
   // 처음 실행시 실행되는 함수
   async mounted() {
-    // 첫 번째 아이템으로 기본값 설정 (v-select)
-    this.select_box.selected_item = this.select_box.items[0];
+    // 초기 파일이 없으면 생성하는 함수 호출
+    await this.make_settings_file(this.save_file_location, {
+      // v-select는 첫 번째 아이템으로 기본값 설정
+      search_type: this.select_box.items[0],
+      repeat_cnt: this.repeat_cnt,
+      gallary_id: this.gallary_id,
+      keyword: this.keyword,
+      settings: {
+        program_entire_settings: {
+          max_parallel: this.settings.program_entire_settings.max_parallel,
+        },
+        user_preferences: {
+          clear_data_on_search:
+            this.settings.user_preferences.clear_data_on_search,
+        },
+        auto_save: {
+          auto_save_result: this.settings.auto_save.auto_save_result,
+          max_auto_save: this.settings.auto_save.max_auto_save,
+        },
+      } as Settings,
+      auto_save: [],
+      manual_save: [],
+    } as SaveData);
 
-    // 설정 파일이 없다면 생성한다.
-    if (!fs.existsSync(this.save_file_location)) {
-      try {
-        await fs.promises.writeFile(
-          this.save_file_location,
-          JSON.stringify(
-            {
-              search_type: this.select_box.selected_item,
-              repeat_cnt: this.repeat_cnt,
-              gallary_id: this.gallary_id,
-              keyword: this.keyword,
-              settings: {
-                program_entire_settings: {
-                  max_parallel:
-                    this.settings.program_entire_settings.max_parallel,
-                },
-                user_preferences: {
-                  clear_data_on_search:
-                    this.settings.user_preferences.clear_data_on_search,
-                },
-                auto_save: {
-                  auto_save_result: this.settings.auto_save.auto_save_result,
-                  max_auto_save: this.settings.auto_save.max_auto_save,
-                },
-              } as Settings,
-              auto_save: [],
-              manual_save: [],
-            } as SaveData,
-            null,
-            2
-          )
-        );
-        console.log("Init Data saved successfully");
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
+    // 설정 파일을 불러오고 UI에 반영한다
     try {
       const data = await fs.promises.readFile(this.save_file_location, "utf-8");
       const parsed_data: SaveData = JSON.parse(data);
+
       this.repeat_cnt = parsed_data.repeat_cnt;
       this.gallary_id = parsed_data.gallary_id;
       this.keyword = parsed_data.keyword;
       this.select_box.selected_item = parsed_data.search_type;
       this.settings = parsed_data.settings;
-      console.log("Data loaded successfully");
+
+      console.log("설정 파일을 성공적으로 불러왔습니다.");
     } catch (err) {
       console.error(err);
     }
@@ -439,6 +390,24 @@ export default Vue.extend({
   },
 
   methods: {
+    // 초기 파일이 없으면 생성하는 함수
+    async make_settings_file(
+      safe_file_location: string,
+      save_obj_data: SaveData
+    ) {
+      // 설정 파일이 없다면 생성한다.
+      if (!fs.existsSync(safe_file_location)) {
+        try {
+          await fs.promises.writeFile(
+            safe_file_location,
+            JSON.stringify(save_obj_data, null, 2)
+          );
+          console.log("초기 설정 파일이 존재하지 않아 생성했습니다.");
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    },
     async save_manual_data() {
       // 먼저 설정 파일을 불러온다
       const data = (
@@ -463,6 +432,9 @@ export default Vue.extend({
         article_data: this.table_rows,
       });
 
+      // 수동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
+      this.save_data.manual_save = parsed_data.manual_save;
+
       // parsed_data 객체를 JSON 문자열로 변환
       const json_data = JSON.stringify(parsed_data, null, 2);
 
@@ -470,15 +442,16 @@ export default Vue.extend({
         // JSON 데이터를 파일에 씁니다.
         await fs.promises.writeFile(this.save_file_location, json_data);
         console.log(
-          "[MANUAL SAVE] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+          "[수동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
         );
       } catch (error) {
         console.error(
-          "[MANUAL SAVE] 데이터를 저장하는 중 오류가 발생했습니다.",
+          "[수동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
           error
         );
       }
     },
+
     async save_data_on_disk() {
       // 종료 직전에 프로그램의 입력 데이터를 저장한다.
       // 현재 dc_data.json 에 저장된 데이터를 불러온다.
@@ -612,22 +585,23 @@ export default Vue.extend({
       // 확실한 종료 보장을 위해 일렉트론 백그라운드 서버와 IPC 통신으로 종료 요청
       ipcRenderer.send("close-me");
     },
+
+    // 검색 버튼 누를 시 실행되는 함수
     async search_btn_click() {
       // 여기서 그냥 웹 요청 보내면 CORS가 걸려서 ipc로 백그라운드 node.js 서버에서
       // 웹 요청을 보내고 응답을 받아서 화면에 렌더링하는 방식으로 구현해야 함
 
       // 검색 버튼 누르면 기존 검색 결과 초기화
-      if (this.settings.user_preferences.clear_data_on_search) {
-        // this.data_table.items = [];
+      if (this.settings.user_preferences.clear_data_on_search)
         this.table_rows = [];
-      }
 
+      // 버튼에 로딩 상태 반영
       this.search_btn.is_loading = true;
 
       console.log(typeof this.repeat_cnt);
 
       // 웹 요청 보내기
-      ipcRenderer.send("web-request", {
+      ipcRenderer.send(IPCChannel.WEB_REQUEST, {
         id: this.gallary_id,
         repeat_cnt: this.repeat_cnt,
         keyword: this.keyword,
@@ -645,99 +619,101 @@ export default Vue.extend({
       });
 
       // 백그라운드 서버로부터 응답 받기
+      ipcRenderer.on(IPCChannel.WEB_RESPONSE, this.web_response_callback);
+
+      // 백그라운드 서버로부터 진행 상황 받기 (실제로는 콜백함수가 2번 실행되어 전달됨)
       ipcRenderer.on(
-        "web-request-response",
-        async (event, result: Article[][]) => {
-          console.log(result.length);
-          const items: AGGridVueArticle[] = [];
-
-          console.time("배열 삽입 시간 : ");
-          for (let article of result) {
-            if (article.length > 0) {
-              for (let item of article) {
-                items.push({
-                  번호: item.gall_num,
-                  제목: item.gall_tit,
-                  댓글수: item.reply_num,
-                  작성자: item.gall_writer,
-                  조회수: item.gall_count,
-                  추천: item.gall_recommend,
-                  작성일: item.gall_date,
-                });
-              }
-            }
-          }
-
-          console.timeEnd("배열 삽입 시간 : ");
-          this.table_rows = items; //데이터 바인딩 (표 반영)
-
-          // 버튼 로딩 완료 반영
-          this.search_btn.is_loading = false;
-
-          // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
-          if (this.settings.auto_save.auto_save_result) {
-            // 먼저 설정 파일을 불러온다
-            const data = (
-              await fs.promises.readFile(this.save_file_location)
-            ).toString();
-
-            // data를 json으로 파싱한다
-            const parsed_data: SaveData = JSON.parse(data);
-
-            // auto_save 값이 없으면 빈 배열을 추가한다.
-            if (!parsed_data.auto_save) {
-              parsed_data.auto_save = [];
-            }
-
-            const limit = this.settings.auto_save.max_auto_save; // 자동 저장 갯수 제한
-
-            // 저장하려는 데이터 내용이 비었으면 자동 저장하지 않는다.
-            if (items.length === 0) {
-              return;
-            }
-
-            // 갯수 제한에 걸리면 맨 뒷 요소를 제거함 (추가는 뒤에다가 계속함)
-            if (parsed_data.auto_save.length >= limit) {
-              parsed_data.auto_save.pop();
-            }
-
-            // 현재 검색한 내용을 auto_save에 기록한다.
-            parsed_data.auto_save.push({
-              user_input: {
-                search_type: this.select_box.selected_item,
-                repeat_cnt: this.repeat_cnt,
-                gallary_id: this.gallary_id,
-                keyword: this.keyword,
-              },
-              article_data: items,
-            });
-
-            // parsed_data 객체를 JSON 문자열로 변환
-            const json_data = JSON.stringify(parsed_data, null, 2);
-
-            try {
-              // JSON 데이터를 파일에 씁니다.
-              await fs.promises.writeFile(this.save_file_location, json_data);
-              console.log(
-                "[AUTOSAVE] 검색 데이터가 파일에 성공적으로 저장되었습니다."
-              );
-            } catch (error) {
-              console.error(
-                "[AUTOSAVE] 데이터를 저장하는 중 오류가 발생했습니다.",
-                error
-              );
-            }
-          }
-        }
-      );
-
-      ipcRenderer.on(
-        "web-request-progress",
+        IPCChannel.WEB_REQUEST_PROGRESS,
         (event, progress: string, status: string) => {
           this.progress_value = progress;
           this.loading_text_data = status;
         }
       );
+    },
+
+    // 웹 응답 받아 처리하는 콜백 함수
+    async web_response_callback(event: IpcRendererEvent, result: Article[][]) {
+      console.log(result.length);
+      const items: AGGridVueArticle[] = [];
+
+      console.time("배열 삽입 시간 : ");
+      for (let article of result) {
+        if (article.length > 0) {
+          for (let item of article) {
+            items.push({
+              번호: item.gall_num,
+              제목: item.gall_tit,
+              댓글수: item.reply_num,
+              작성자: item.gall_writer,
+              조회수: item.gall_count,
+              추천: item.gall_recommend,
+              작성일: item.gall_date,
+            });
+          }
+        }
+      }
+
+      console.timeEnd("배열 삽입 시간 : ");
+      this.table_rows = items; //데이터 바인딩 (표 반영)
+
+      // 버튼 로딩 완료 반영
+      this.search_btn.is_loading = false;
+
+      // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
+      if (this.settings.auto_save.auto_save_result) {
+        // 먼저 설정 파일을 불러온다
+        const data = (
+          await fs.promises.readFile(this.save_file_location)
+        ).toString();
+
+        // data를 json으로 파싱한다
+        const parsed_data: SaveData = JSON.parse(data);
+
+        // auto_save 값이 없으면 빈 배열을 추가한다.
+        if (!parsed_data.auto_save) {
+          parsed_data.auto_save = [];
+        }
+
+        const limit = this.settings.auto_save.max_auto_save; // 자동 저장 갯수 제한
+
+        // 저장하려는 데이터 내용이 비었으면 자동 저장하지 않는다.
+        if (items.length === 0) return;
+
+        // 갯수 제한에 걸리면 맨 뒷 요소를 제거함 (추가는 뒤에다가 계속함)
+        if (parsed_data.auto_save.length >= limit) {
+          parsed_data.auto_save.pop();
+        }
+
+        // 현재 검색한 내용을 auto_save에 기록한다.
+        parsed_data.auto_save.push({
+          user_input: {
+            search_type: this.select_box.selected_item,
+            repeat_cnt: this.repeat_cnt,
+            gallary_id: this.gallary_id,
+            keyword: this.keyword,
+          },
+          article_data: items,
+        });
+
+        // 자동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
+        this.save_data.auto_save = parsed_data.auto_save;
+
+        // parsed_data 객체를 JSON 문자열로 변환
+        const json_data = JSON.stringify(parsed_data, null, 2);
+
+        try {
+          // JSON 데이터를 파일에 씁니다.
+          await fs.promises.writeFile(this.save_file_location, json_data);
+          console.log(
+            "[자동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+          );
+        } catch (error) {
+          console.error(
+            "[자동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
+            error
+          );
+        }
+      }
     },
   },
   computed: {
