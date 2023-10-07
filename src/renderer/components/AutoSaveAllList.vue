@@ -16,6 +16,15 @@
               <v-list-item-subtitle>저장 목록 확인</v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
+
+          <v-list-item v-if="auto_save_data.length === 0">
+            <v-list-item-content>
+              <v-alert color="blue" type="info">
+                데이터가 존재하지 않습니다.
+              </v-alert>
+            </v-list-item-content>
+          </v-list-item>
+
           <v-card
             v-for="(article, index) in auto_save_data"
             :key="index"
@@ -25,8 +34,20 @@
             @click="click_auto_save_item(article)">
             <v-list-item>
               <v-list-item-content>
-                <v-list-item-title class="text-h6">
-                  갤러리 : {{ article.user_input.gallary_id }}
+                <v-list-item-title
+                  class="text-h6"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                  ">
+                  <span>갤러리 : {{ article.user_input.gallary_id }}</span>
+                  <span>
+                    <!-- 삭제 아이콘 추가 -->
+                    <v-btn color="red" icon @click.stop="delete_article(index)">
+                      <v-icon>mdi-delete</v-icon>
+                    </v-btn>
+                  </span>
                 </v-list-item-title>
                 <v-list-item-subtitle>
                   검색 옵션 : {{ article.user_input.search_type }}
@@ -87,6 +108,9 @@ export default defineComponent({
     click_auto_save_item(article: SaveArticleData) {
       this.selected_auto_save_data = article;
       this.is_open_save_data = !this.is_open_save_data;
+    },
+    delete_article(index: number) {
+      this.$emit("delete:article", index);
     },
   },
   components: {

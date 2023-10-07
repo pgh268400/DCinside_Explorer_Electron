@@ -38,6 +38,7 @@
       :is_open_dialog="is_open_manual_data"
       :color="color"
       v-on:update:value="is_open_manual_data = $event"
+      v-on:delete:article="manual_delete_article"
       :auto_save_data="manual_save_data"></manual-save-all-list>
 
     <!-- 자동 저장 목록 -->
@@ -45,6 +46,7 @@
       :is_open_dialog="is_open_save_data"
       :color="color"
       v-on:update:value="is_open_save_data = $event"
+      v-on:delete:article="auto_delete_article"
       :auto_save_data="auto_save_data"></auto-save-all-list>
   </div>
 </template>
@@ -55,6 +57,7 @@ import { SaveArticleData, SaveData } from "@/types/view";
 import { defineComponent } from "vue";
 import ManualSaveAllList from "./ManualSaveAllList.vue";
 import AutoSaveAllList from "./AutoSaveAllList.vue";
+import fs from "fs";
 export default defineComponent({
   props: {
     is_open_dialog: Boolean,
@@ -95,6 +98,20 @@ export default defineComponent({
     async click_manual_save_item() {
       // await this.read_file();
       this.is_open_manual_data = !this.is_open_manual_data;
+    },
+
+    async manual_delete_article(index: number) {
+      // index 번을 삭제합니다 출력
+      // console.log(`수동 삭제 : 상위에서 ${index}번을 삭제합니다.`);
+
+      // 상위로 이벤트 전파
+      this.$emit("delete:article", { type: "manual", index });
+    },
+
+    async auto_delete_article(index: number) {
+      this.$emit("delete:article", { type: "auto", index });
+      // // index 번을 삭제합니다 출력
+      // console.log(`자동 삭제 : 상위에서 ${index}번을 삭제합니다.`);
     },
 
     // 클릭할때마다 호출해야 하는 파일 읽기 함수

@@ -6,7 +6,7 @@
           <span style="color: white">SaveView</span>
         </v-toolbar-title>
       </v-toolbar>
-      <div class="pa-4">
+      <div class="pa-6">
         <main-table
           :rows_data="table_rows"
           :is_hide_save_button="true"></main-table>
@@ -47,5 +47,3 @@ export default defineComponent({
   },
 });
 </script>
-
-<style scoped></style>

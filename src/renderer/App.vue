@@ -116,7 +116,9 @@
                 높아집니다.
                 <u>100 이상 올리는 것은 권장하지 않습니다.</u>
                 <br />
-                <b>기본값 : 100</b>
+                <b>
+                  기본값 : {{ settings.program_entire_settings.max_parallel }}
+                </b>
               </span>
             </v-tooltip>
           </v-list-item>
@@ -184,7 +186,7 @@
                 아주 큰 값을 입력하면 무한정 저장하게 할 수 있으나 용량도 무한히
                 늘어날 수 있으니 주의해야 합니다.
                 <br />
-                <b>기본값 : 10</b>
+                <b>기본값 : {{ settings.auto_save.max_auto_save }}</b>
               </span>
             </v-tooltip>
           </v-list-item>
@@ -205,6 +207,7 @@
     <load-interface
       :is_open_dialog="is_open_load"
       v-on:update:value="is_open_load = $event"
+      v-on:delete:article="delete_article"
       :color="theme_color"
       :auto_save_data="save_data.auto_save"
       :manual_save_data="save_data.manual_save"></load-interface>
@@ -397,6 +400,44 @@ export default Vue.extend({
   },
 
   methods: {
+    async delete_article(obj: any) {
+      console.log(obj);
+
+      try {
+        const data = await fs.promises.readFile(
+          this.save_file_location,
+          "utf-8"
+        );
+        const parsed_data: SaveData = JSON.parse(data);
+
+        if (!parsed_data.auto_save)
+          throw new Error("오류 : auto_save 데이터가 존재하지 않습니다");
+
+        if (!parsed_data.manual_save)
+          throw new Error("오류 : manual_save 데이터가 존재하지 않습니다");
+
+        // 인덱스에 해당하는 데이터 삭제
+        // 자바스크립트에서 splice는 원본 배열을 수정한다.
+
+        if (obj.type === "manual") {
+          parsed_data.manual_save.splice(obj.index, 1);
+          this.save_data.manual_save.splice(obj.index, 1); // RAM 상에서도 삭제
+        } else {
+          parsed_data.auto_save.splice(obj.index, 1);
+          this.save_data.auto_save.splice(obj.index, 1); // RAM 상에서도 삭제
+        }
+
+        // 파일에 쓰기
+        const json_data = JSON.stringify(parsed_data, null, 2); // 데이터를 JSON 문자열로 변환하고 가독성을 위해 두 번째 매개변수로 null, 2를 전달
+        await fs.promises.writeFile(
+          this.save_file_location,
+          json_data,
+          "utf-8"
+        ); // 파일에 JSON 데이터 쓰기
+      } catch (error: any) {
+        console.log(error);
+      }
+    },
     // 초기 파일이 없으면 생성하는 함수
     async make_settings_file(
       safe_file_location: string,
@@ -685,9 +726,13 @@ export default Vue.extend({
         if (items.length === 0) return;
 
         // 갯수 제한에 걸리면 맨 뒷 요소를 제거함 (추가는 뒤에다가 계속함)
-        if (parsed_data.auto_save.length >= limit) {
-          parsed_data.auto_save.pop();
-        }
+        // 이러면 자동 저장 개수 제한이 크게 의미가 없는 거 같아서 일단 주석처리
+        // if (parsed_data.auto_save.length >= limit) {
+        //   parsed_data.auto_save.pop();
+        // }
+
+        // 개수 제한에 걸린다면 자동 저장 하지 않는다
+        if (parsed_data.auto_save.length >= limit) return;
 
         // 현재 검색한 내용을 auto_save에 기록한다.
         parsed_data.auto_save.push({
@@ -749,6 +794,7 @@ export default Vue.extend({
 </script>
 
 <style scoped>
+/* 카드 뾰족하게 */
 .v-sheet.v-card {
   border-radius: 0px;
 }
