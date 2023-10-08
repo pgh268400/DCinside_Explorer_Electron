@@ -69,6 +69,7 @@
           :loading_text_data="loading_text_data"
           :progress_value="progress_value"
           :is_loading="search_btn.is_loading"
+          :is_manual_save_loading="save_button.is_loading"
           @manual_save="save_manual_data"></main-table>
       </v-container>
     </v-main>
@@ -303,7 +304,13 @@ export default Vue.extend({
 
       table_rows: [] as AGGridVueArticle[],
 
+      // 검색 버튼의 로딩 상태를 나타내는 변수
       search_btn: {
+        is_loading: false,
+      },
+
+      // 수동 저장 버튼의 로딩 상태를 나타내는 변수
+      save_button: {
         is_loading: false,
       },
       data_table_loading: false,
@@ -348,50 +355,7 @@ export default Vue.extend({
 
   // 처음 실행시 실행되는 함수
   async mounted() {
-    // 초기 파일이 없으면 생성하는 함수 호출
-    await this.make_settings_file(this.save_file_location, {
-      // v-select는 첫 번째 아이템으로 기본값 설정
-      search_type: this.select_box.items[0],
-      repeat_cnt: this.repeat_cnt,
-      gallary_id: this.gallary_id,
-      keyword: this.keyword,
-      settings: {
-        program_entire_settings: {
-          max_parallel: this.settings.program_entire_settings.max_parallel,
-        },
-        user_preferences: {
-          clear_data_on_search:
-            this.settings.user_preferences.clear_data_on_search,
-        },
-        auto_save: {
-          auto_save_result: this.settings.auto_save.auto_save_result,
-          max_auto_save: this.settings.auto_save.max_auto_save,
-        },
-      } as Settings,
-      auto_save: [],
-      manual_save: [],
-    } as SaveData);
-
-    // 설정 파일을 불러오고 UI에 반영한다
-    try {
-      const data = await fs.promises.readFile(this.save_file_location, "utf-8");
-      const parsed_data: SaveData = JSON.parse(data);
-
-      this.repeat_cnt = parsed_data.repeat_cnt;
-      this.gallary_id = parsed_data.gallary_id;
-      this.keyword = parsed_data.keyword;
-      this.select_box.selected_item = parsed_data.search_type;
-      this.settings = parsed_data.settings;
-
-      // 설정 파일을 불러오면서 저장 데이터도 반영한다
-      // (위에서 auto_save, manual_save는 없으면 무조건 생성하므로 null이 될 수 없다.)
-      this.save_data.auto_save = parsed_data.auto_save as SaveArticleData[];
-      this.save_data.manual_save = parsed_data.manual_save as SaveArticleData[];
-
-      console.log("설정 파일을 성공적으로 불러왔습니다.");
-    } catch (err) {
-      console.error(err);
-    }
+    this.load_init_data();
   },
 
   // 종료 직전에 실행되는 함수
@@ -400,6 +364,62 @@ export default Vue.extend({
   },
 
   methods: {
+    // 가장 초기에 파일을 불러오기 위해 호출되는 함수(mounted에서 사용)
+    async load_init_data() {
+      // 초기 파일이 없으면 생성하는 함수 호출
+      await this.make_settings_file(this.save_file_location, {
+        // v-select는 첫 번째 아이템으로 기본값 설정
+        search_type: this.select_box.items[0],
+        repeat_cnt: this.repeat_cnt,
+        gallary_id: this.gallary_id,
+        keyword: this.keyword,
+        settings: {
+          program_entire_settings: {
+            max_parallel: this.settings.program_entire_settings.max_parallel,
+          },
+          user_preferences: {
+            clear_data_on_search:
+              this.settings.user_preferences.clear_data_on_search,
+          },
+          auto_save: {
+            auto_save_result: this.settings.auto_save.auto_save_result,
+            max_auto_save: this.settings.auto_save.max_auto_save,
+          },
+        } as Settings,
+        auto_save: [],
+        manual_save: [],
+      } as SaveData);
+
+      // 설정 파일을 불러오고 UI에 반영한다
+      try {
+        const data = await fs.promises.readFile(
+          this.save_file_location,
+          "utf-8"
+        );
+        const parsed_data: SaveData = JSON.parse(data);
+
+        this.repeat_cnt = parsed_data.repeat_cnt;
+        this.gallary_id = parsed_data.gallary_id;
+        this.keyword = parsed_data.keyword;
+        this.select_box.selected_item = parsed_data.search_type;
+        this.settings = parsed_data.settings;
+
+        // 설정 파일을 불러오면서 저장 데이터도 반영한다
+        // (위에서 auto_save, manual_save는 없으면 무조건 생성하므로 null이 될 수 없다.)
+        this.save_data.auto_save = parsed_data.auto_save as SaveArticleData[];
+        this.save_data.manual_save =
+          parsed_data.manual_save as SaveArticleData[];
+
+        console.log("설정 파일을 성공적으로 불러왔습니다.");
+      } catch (err) {
+        console.log("설정 파일을 불러오는 중 오류가 발생했습니다.");
+        console.error(err);
+
+        // 설정 파일을 불러오는데 문제가 생기면 설정 파일을 지우고 다시 재귀적으로 호출한다
+        // await fs.promises.unlink(this.save_file_location);
+        // await this.load_init_data();
+      }
+    },
     async delete_article(obj: any) {
       console.log(obj);
 
@@ -456,47 +476,74 @@ export default Vue.extend({
         }
       }
     },
+
+    // 해당 함수는 수동 저장 버튼을 누를 때마다 호출된다.
+    // 참고로 버튼을 연타하니깐 race condition 인지 몰라도
+    // Json.Parse 부분에서 오류가 발생해서 버튼을 연타하지 못하도록
+    // 변경했다. (수동 저장이 다 이루어지기 전까진 버튼이 로딩 상태로 변함)
     async save_manual_data() {
-      // 먼저 설정 파일을 불러온다
-      const data = (
-        await fs.promises.readFile(this.save_file_location)
-      ).toString();
-
-      // data를 json으로 파싱한다
-      const parsed_data: SaveData = JSON.parse(data);
-
-      if (!parsed_data.manual_save) {
-        parsed_data.manual_save = [];
-      }
-
-      // 현재 검색한 내용을 기록한다.
-      parsed_data.manual_save.push({
-        user_input: {
-          search_type: this.select_box.selected_item,
-          repeat_cnt: this.repeat_cnt,
-          gallary_id: this.gallary_id,
-          keyword: this.keyword,
-        },
-        article_data: this.table_rows,
-      });
-
-      // 수동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
-      this.save_data.manual_save = parsed_data.manual_save;
-
-      // parsed_data 객체를 JSON 문자열로 변환
-      const json_data = JSON.stringify(parsed_data, null, 2);
-
       try {
-        // JSON 데이터를 파일에 씁니다.
-        await fs.promises.writeFile(this.save_file_location, json_data);
-        console.log(
-          "[수동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+        this.save_button.is_loading = true; // 버튼을 로딩 상태로 변경
+        // 먼저 설정 파일을 불러온다
+        const data = await fs.promises.readFile(
+          this.save_file_location,
+          "utf-8"
         );
-      } catch (error) {
-        console.error(
-          "[수동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
-          error
-        );
+        // data를 json으로 파싱한다
+        const parsed_data: SaveData = JSON.parse(data);
+
+        if (!parsed_data.manual_save) {
+          parsed_data.manual_save = [];
+        }
+
+        // 현재 검색한 내용을 기록한다.
+        parsed_data.manual_save.push({
+          user_input: {
+            search_type: this.select_box.selected_item,
+            repeat_cnt: this.repeat_cnt,
+            gallary_id: this.gallary_id,
+            keyword: this.keyword,
+          },
+          article_data: this.table_rows,
+        });
+
+        // 수동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
+        this.save_data.manual_save = parsed_data.manual_save;
+
+        // parsed_data 객체를 JSON 문자열로 변환
+        const json_data = JSON.stringify(parsed_data, null, 2);
+
+        try {
+          // JSON 데이터를 파일에 씁니다.
+          await fs.promises.writeFile(this.save_file_location, json_data);
+          console.log(
+            "[수동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+          );
+        } catch (error) {
+          console.error(
+            "[수동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
+            error
+          );
+        }
+      } catch (error: any) {
+        console.log(error);
+      } finally {
+        this.save_button.is_loading = false; // 버튼을 로딩 상태에서 해제
+
+        this.$toast("저장이 완료되었습니다", {
+          position: "bottom-center",
+          timeout: 718,
+          closeOnClick: true,
+          pauseOnFocusLoss: true,
+          pauseOnHover: false,
+          draggable: true,
+          draggablePercent: 0.6,
+          showCloseButtonOnHover: true,
+          hideProgressBar: true,
+          closeButton: "button",
+          icon: true,
+          rtl: false,
+        } as any);
       }
     },
 
@@ -631,7 +678,8 @@ export default Vue.extend({
       // window.close();
       // app.exit(0);
       // 확실한 종료 보장을 위해 일렉트론 백그라운드 서버와 IPC 통신으로 종료 요청
-      ipcRenderer.send("close-me");
+
+      ipcRenderer.send(IPCChannel.CLOSE_ME);
     },
 
     // 검색 버튼 누를 시 실행되는 함수

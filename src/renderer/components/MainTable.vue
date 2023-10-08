@@ -45,7 +45,8 @@
           color="primary"
           v-if="!is_hide_save_button && ag_grid_vue.total_page"
           style="height: 29px; padding: 10px 10px"
-          @click="save_search_data_manually()">
+          @click="save_search_data_manually()"
+          :loading="is_manual_save_loading">
           검색 저장
         </v-btn>
       </v-col>
@@ -105,6 +106,7 @@ export default defineComponent({
     progress_value: String, // 프로그레스바 표시를 위한 변수
     loading_text_data: String, // 로딩중에 표시할 텍스트
     is_loading: Boolean, // 검색 버튼에서 로딩중인지 표시
+    is_manual_save_loading: Boolean, // 수동 저장 버튼에서 로딩중인지 표시
 
     // 데이터 표시를 위한 props
     rows_data: {
@@ -221,21 +223,6 @@ export default defineComponent({
 
       // 저장을 위해 이벤트를 상위로 전파시킨다.
       this.$emit("manual_save");
-
-      this.$toast("저장이 완료되었습니다", {
-        position: "bottom-center",
-        timeout: 718,
-        closeOnClick: true,
-        pauseOnFocusLoss: true,
-        pauseOnHover: false,
-        draggable: true,
-        draggablePercent: 0.6,
-        showCloseButtonOnHover: true,
-        hideProgressBar: true,
-        closeButton: "button",
-        icon: true,
-        rtl: false,
-      });
     },
     // 맨 첫페이지 << 버튼
     first_page() {

@@ -62,6 +62,15 @@ async function createWindow() {
     win.loadURL("app://./index.html");
   }
 
+  // 종료 요청 처리
+  ipcMain.on(IPCChannel.CLOSE_ME, (event, arg) => {
+    // 크롬 개발자 도구가 열려있으면 닫고 종료해줘야 함. 아니면 종료가 안됨.
+    if (win.webContents.isDevToolsOpened()) {
+      win.webContents.closeDevTools();
+    }
+    app.quit();
+  });
+
   // 창 포커싱 됐을때 이벤트
   // win.on("focus", () => {
   //   // 포커싱 되면 현재 클립보드의 값을 가져온다.
@@ -141,11 +150,6 @@ app.on("ready", async () => {
       console.error(e);
       event.sender.send(IPCChannel.WEB_RESPONSE, []);
     }
-  });
-
-  // 종료 요청 처리
-  ipcMain.on(IPCChannel.CLOSE_ME, (event, arg) => {
-    app.quit();
   });
 
   // 갤러리 ID 클릭 시 해당 갤러리 페이지 여는 IPC
