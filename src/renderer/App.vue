@@ -423,6 +423,13 @@ export default Vue.extend({
     async delete_article(obj: any) {
       console.log(obj);
 
+      // 삭제 버튼을 연타하면 오류가 발생하므로 연타를 못하게 바로 데이터 상에서 날려버린다.
+      if (obj.type === "manual") {
+        this.save_data.manual_save.splice(obj.index, 1); // RAM 상에서도 삭제
+      } else {
+        this.save_data.auto_save.splice(obj.index, 1); // RAM 상에서도 삭제
+      }
+
       try {
         const data = await fs.promises.readFile(
           this.save_file_location,
@@ -441,10 +448,8 @@ export default Vue.extend({
 
         if (obj.type === "manual") {
           parsed_data.manual_save.splice(obj.index, 1);
-          this.save_data.manual_save.splice(obj.index, 1); // RAM 상에서도 삭제
         } else {
           parsed_data.auto_save.splice(obj.index, 1);
-          this.save_data.auto_save.splice(obj.index, 1); // RAM 상에서도 삭제
         }
 
         // 파일에 쓰기
