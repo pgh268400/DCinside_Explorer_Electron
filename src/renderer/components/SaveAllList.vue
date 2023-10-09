@@ -45,17 +45,15 @@
                   <!-- 둘다 있다면 갤러리명(id명) 형태로 렌더링 -->
                   <span
                     v-if="!article.user_input.gallery_name"
-                    style="overflow: hidden; text-overflow: ellipsis">
+                    class="over_flow">
                     갤러리 : {{ article.user_input.gallery_id }}
                   </span>
                   <span
                     v-else-if="!article.user_input.gallery_id"
-                    style="overflow: hidden; text-overflow: ellipsis">
+                    class="over_flow">
                     갤러리 : {{ article.user_input.gallery_name }}
                   </span>
-                  <span
-                    v-else
-                    style="overflow: hidden; text-overflow: ellipsis">
+                  <span v-else class="over_flow">
                     <span>갤러리 : {{ article.user_input.gallery_name }}</span>
                     <span class="text-subtitle-1">
                       ({{ article.user_input.gallery_id }})
@@ -211,4 +209,9 @@ export default defineComponent({
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.over_flow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>
