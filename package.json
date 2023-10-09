@@ -2,6 +2,7 @@
   "name": "dc_explorer_project",
   "version": "0.1.0",
   "private": true,
+  "author": "File <pgh268400@naver.com>",
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
