@@ -4,20 +4,20 @@
       <v-card>
         <v-toolbar density="compact" :color="color" dense>
           <v-toolbar-title>
-            <span style="color: white">ManualSaveAllList</span>
+            <span style="color: white">SaveAllList</span>
           </v-toolbar-title>
         </v-toolbar>
         <div class="pa-4">
           <v-list-item two-line>
             <v-list-item-content>
               <v-list-item-title class="text-h5">
-                수동 저장 목록
+                {{ type }} 저장 목록
               </v-list-item-title>
               <v-list-item-subtitle>저장 목록 확인</v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
 
-          <v-list-item v-if="auto_save_data.length === 0">
+          <v-list-item v-if="save_data.length === 0">
             <v-list-item-content>
               <v-alert color="blue" type="info">
                 데이터가 존재하지 않습니다.
@@ -26,7 +26,7 @@
           </v-list-item>
 
           <v-card
-            v-for="(article, index) in auto_save_data"
+            v-for="(article, index) in save_data"
             :key="index"
             shaped
             elevation="3"
@@ -41,7 +41,26 @@
                     justify-content: space-between;
                     align-items: center;
                   ">
-                  <span>갤러리 : {{ article.user_input.gallery_id }}</span>
+                  <!-- 갤러리 네임이 없다면 id로 렌더링, 아니면 갤러리 네임으로 렌더링 -->
+                  <!-- 둘다 있다면 갤러리명(id명) 형태로 렌더링 -->
+                  <span
+                    v-if="!article.user_input.gallery_name"
+                    style="overflow: hidden; text-overflow: ellipsis">
+                    갤러리 : {{ article.user_input.gallery_id }}
+                  </span>
+                  <span
+                    v-else-if="!article.user_input.gallery_id"
+                    style="overflow: hidden; text-overflow: ellipsis">
+                    갤러리 : {{ article.user_input.gallery_name }}
+                  </span>
+                  <span
+                    v-else
+                    style="overflow: hidden; text-overflow: ellipsis">
+                    <span>갤러리 : {{ article.user_input.gallery_name }}</span>
+                    <span class="text-subtitle-1">
+                      ({{ article.user_input.gallery_id }})
+                    </span>
+                  </span>
                   <span>
                     <!-- 삭제 아이콘 추가 -->
                     <v-btn color="red" icon @click.stop="delete_article(index)">
@@ -55,7 +74,7 @@
                 <v-list-item-subtitle>
                   반복 횟수 : {{ article.user_input.repeat_cnt }}
                 </v-list-item-subtitle>
-                <v-list-item-subtitle>
+                <v-list-item-subtitle style="color: black">
                   검색어 : {{ article.user_input.keyword }}
                 </v-list-item-subtitle>
               </v-list-item-content>
@@ -78,11 +97,14 @@ import { Nullable } from "@/types/default";
 import { SaveArticleData } from "@/types/view";
 import SaveView from "./SaveView.vue";
 import { defineComponent } from "vue";
+import { IPCChannel } from "@/types/ipc";
+import { ipcRenderer } from "electron";
 export default defineComponent({
   props: {
+    type: String, // 자동 저장인지 수동 저장인지 구분 ("자동" / "수동")
     is_open_dialog: Boolean,
     color: String,
-    auto_save_data: {
+    save_data: {
       required: true,
       type: Array as () => SaveArticleData[],
     },
@@ -145,6 +167,45 @@ export default defineComponent({
       if (new_val === false) {
         this.gallery_id = this.origin_gallery_id;
       }
+    },
+    // 갤러리 id를 받아서 메인 프로세스에 요청을 보내서 갤러리 이름을 가져오기 위해 Watch를 활용한다.
+    save_data: function (
+      new_val: SaveArticleData[],
+      old_val: SaveArticleData[]
+    ) {
+      const id_dict: any = {};
+
+      // for of로 순회
+      for (const element of new_val) {
+        console.log(element.user_input.gallery_id);
+        id_dict[element.user_input.gallery_id] = null;
+      }
+
+      console.log("REQUEST_DATA", id_dict);
+
+      // id_dict
+      // { "lies_of_p" : null } 이런식으로 렌더러에서 데이터를 보내 IPC 요청하면
+      // { "lies_of_p" : "P의 거짓 마이너 갤러리" } 이런식으로 메인 프로세스에서 응답이 온다.
+
+      // 메인 프로세스에 요청을 보내서 갤러리 이름을 가져온다.
+      ipcRenderer.send(IPCChannel.GET_GALLERY_TEXT_NAME_REQ, id_dict);
+
+      // 데이터를 수신받는다.
+      ipcRenderer.on(IPCChannel.GET_GALLERY_TEXT_NAME_RES, (event, id_dict) => {
+        console.log("Get Gallery Text Name Response", id_dict);
+        // 들어온 데이터에 맞게 갤러리 이름을 바꿔준다.
+        // 변수에 바로 반영하면 데이터 바인딩에 의해 table의 입력값이 영향을 받는다.
+        // 보여주기 전용의 key를 하나 더 save_data에 넣어줘야 한다.
+
+        for (const element of this.save_data) {
+          if (element.user_input.gallery_id in id_dict) {
+            element.user_input.gallery_name =
+              id_dict[element.user_input.gallery_id];
+            // element.user_input.gallery_id =
+            //   id_dict[element.user_input.gallery_id];
+          }
+        }
+      });
     },
   },
 });

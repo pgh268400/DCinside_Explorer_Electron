@@ -7,6 +7,7 @@ interface UserInput {
   repeat_cnt: number;
   gallery_id: string;
   keyword: string;
+  gallery_name?: string; //해당 변수는 실행중에 갤러리 id를 텍스트로 보여주는데 사용하는 임시 변수로 파일에 기록되지 않는다.
 }
 
 // 글 자동 저장 / 일반 저장으로 사용할 데이터 타입 정의

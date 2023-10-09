@@ -170,6 +170,21 @@ app.on("ready", async () => {
       }
     }
   );
+
+  // 갤러리 텍스트 명 처리
+  //  { "lies_of_p" : null } 이런식으로 렌더러에서 데이터를 보내 IPC 요청하면
+  // { "lies_of_p" : "P의 거짓 마이너 갤러리" } 이런식으로 메인 프로세스에서 응답해야 한다.
+  ipcMain.on(
+    IPCChannel.GET_GALLERY_TEXT_NAME_REQ,
+    async (event, id_dict: any) => {
+      for (const [id, val] of Object.entries(id_dict)) {
+        parser = await DCAsyncParser.create(id);
+        id_dict[id] = await parser.get_gallery_text_name();
+      }
+      console.log("데이터 준비 완료", id_dict);
+      event.sender.send(IPCChannel.GET_GALLERY_TEXT_NAME_RES, id_dict);
+    }
+  );
 });
 
 // Exit cleanly on request from parent process in development mode.

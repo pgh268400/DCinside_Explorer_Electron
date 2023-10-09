@@ -170,6 +170,21 @@ class DCAsyncParser {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  // 갤러리 텍스트 명을 알아내서 리턴하는 함수
+  public async get_gallery_text_name(): Promise<string> {
+    const url = `https://gall.dcinside.com/${this.gallary_type}board/lists?id=${this.id}`;
+    const res = await this.custom_fetch(url);
+
+    const pattern = /<title>(.*?)<\/title>/;
+    const matches = res.match(pattern);
+
+    if (matches == null || matches.length == 0) {
+      throw new Error("갤러리 이름을 찾을 수 없습니다.");
+    }
+
+    return matches[1].split(" - ")[0];
+  }
+
   // 순수 response data만 응답하는 커스텀 HTTP 요청
   private async custom_fetch(
     url: string,

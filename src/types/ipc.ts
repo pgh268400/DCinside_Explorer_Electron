@@ -20,6 +20,8 @@ enum IPCChannel {
   CLOSE_ME = "close-me",
   OPEN_LINK = "open-link",
   SET_REQUEST_LIMIT = "set-request-limit",
+  GET_GALLERY_TEXT_NAME_REQ = "get-gallery-text-name-req",
+  GET_GALLERY_TEXT_NAME_RES = "get-gallery-text-name-res",
 }
 
 export { DCWebRequest, IPCChannel };

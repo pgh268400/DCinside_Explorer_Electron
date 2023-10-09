@@ -34,20 +34,22 @@
     </v-dialog>
 
     <!-- 수동 저장 목록 -->
-    <manual-save-all-list
+    <save-all-list
+      :type="save_type.manual"
       :is_open_dialog="is_open_manual_data"
       :color="color"
       v-on:update:value="is_open_manual_data = $event"
       v-on:delete:article="manual_delete_article"
-      :auto_save_data="manual_save_data"></manual-save-all-list>
+      :save_data="manual_save_data"></save-all-list>
 
     <!-- 자동 저장 목록 -->
-    <auto-save-all-list
+    <save-all-list
+      :type="save_type.auto"
       :is_open_dialog="is_open_save_data"
       :color="color"
       v-on:update:value="is_open_save_data = $event"
       v-on:delete:article="auto_delete_article"
-      :auto_save_data="auto_save_data"></auto-save-all-list>
+      :save_data="auto_save_data"></save-all-list>
   </div>
 </template>
 
@@ -55,9 +57,7 @@
 import { Nullable } from "@/types/default";
 import { SaveArticleData, SaveData } from "@/types/view";
 import { defineComponent } from "vue";
-import ManualSaveAllList from "./ManualSaveAllList.vue";
-import AutoSaveAllList from "./AutoSaveAllList.vue";
-import fs from "fs";
+import SaveAllList from "./SaveAllList.vue";
 export default defineComponent({
   props: {
     is_open_dialog: Boolean,
@@ -71,6 +71,10 @@ export default defineComponent({
   },
   data() {
     return {
+      save_type: {
+        auto: "자동",
+        manual: "수동",
+      },
       selected_auto_save_data: null as Nullable<SaveArticleData>,
       is_open_save_data: false,
       is_open_manual_data: false,
@@ -131,8 +135,7 @@ export default defineComponent({
     // },
   },
   components: {
-    AutoSaveAllList,
-    ManualSaveAllList,
+    SaveAllList,
   },
 });
 </script>
