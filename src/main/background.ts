@@ -84,8 +84,8 @@ async function createWindow() {
   //   const match = clipboard_text.match(pattern);
 
   //   if (match) {
-  //     const gallary_id = match[1]; // "habj"
-  //     console.log(gallary_id);
+  //     const gallery_id = match[1]; // "habj"
+  //     console.log(gallery_id);
   //   }
   // });
 
@@ -155,10 +155,10 @@ app.on("ready", async () => {
   // 갤러리 ID 클릭 시 해당 갤러리 페이지 여는 IPC
   ipcMain.on(
     IPCChannel.OPEN_LINK,
-    async (event, gallary_id: string, no: string) => {
+    async (event, gallery_id: string, no: string) => {
       if (parser) {
         const g_type = parser.get_garllery_type();
-        const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallary_id}&no=${no}`;
+        const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallery_id}&no=${no}`;
         shell.openExternal(url);
       }
     }

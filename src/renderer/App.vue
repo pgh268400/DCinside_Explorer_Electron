@@ -43,7 +43,7 @@
               hide-spin-buttons></v-text-field>
           </v-col>
           <v-col cols="2">
-            <v-text-field label="갤러리 ID" v-model="gallary_id"></v-text-field>
+            <v-text-field label="갤러리 ID" v-model="gallery_id"></v-text-field>
           </v-col>
           <v-col cols="5">
             <v-text-field
@@ -371,7 +371,7 @@ export default Vue.extend({
         // v-select는 첫 번째 아이템으로 기본값 설정
         search_type: this.select_box.items[0],
         repeat_cnt: this.repeat_cnt,
-        gallary_id: this.gallary_id,
+        gallery_id: this.gallery_id,
         keyword: this.keyword,
         settings: {
           program_entire_settings: {
@@ -399,7 +399,7 @@ export default Vue.extend({
         const parsed_data: SaveData = JSON.parse(data);
 
         this.repeat_cnt = parsed_data.repeat_cnt;
-        this.gallary_id = parsed_data.gallary_id;
+        this.gallery_id = parsed_data.gallery_id;
         this.keyword = parsed_data.keyword;
         this.select_box.selected_item = parsed_data.search_type;
         this.settings = parsed_data.settings;
@@ -506,7 +506,7 @@ export default Vue.extend({
           user_input: {
             search_type: this.select_box.selected_item,
             repeat_cnt: this.repeat_cnt,
-            gallary_id: this.gallary_id,
+            gallery_id: this.gallery_id,
             keyword: this.keyword,
           },
           article_data: this.table_rows,
@@ -570,7 +570,7 @@ export default Vue.extend({
       const data: SaveData = {
         search_type: this.select_box.selected_item,
         repeat_cnt: this.repeat_cnt,
-        gallary_id: this.gallary_id,
+        gallery_id: this.gallery_id,
         keyword: this.keyword,
         settings: {
           program_entire_settings: {
@@ -701,7 +701,7 @@ export default Vue.extend({
 
       // 웹 요청 보내기
       ipcRenderer.send(IPCChannel.WEB_REQUEST, {
-        id: this.gallary_id,
+        id: this.gallery_id,
         repeat_cnt: this.repeat_cnt,
         keyword: this.keyword,
         search_type: this.string_to_query(this.select_box.selected_item),
@@ -711,7 +711,7 @@ export default Vue.extend({
       } as DCWebRequest);
 
       console.log({
-        id: this.gallary_id,
+        id: this.gallery_id,
         repeat_cnt: this.repeat_cnt,
         keyword: this.keyword,
         search_type: this.string_to_query(this.select_box.selected_item),
@@ -792,7 +792,7 @@ export default Vue.extend({
           user_input: {
             search_type: this.select_box.selected_item,
             repeat_cnt: this.repeat_cnt,
-            gallary_id: this.gallary_id,
+            gallery_id: this.gallery_id,
             keyword: this.keyword,
           },
           article_data: items,
@@ -821,12 +821,12 @@ export default Vue.extend({
   },
   computed: {
     // Vuex 데이터 추가
-    gallary_id: {
-      get() {
-        return this.$store.getters.get_gallary_id;
+    gallery_id: {
+      get(): string {
+        return this.$store.getters.get_gallery_id;
       },
-      set(value) {
-        this.$store.commit("set_gallary_id", value);
+      set(value: string) {
+        this.$store.commit("set_gallery_id", value);
       },
     },
   },

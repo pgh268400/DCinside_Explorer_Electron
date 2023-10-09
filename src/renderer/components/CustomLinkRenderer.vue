@@ -18,12 +18,12 @@ export default {
   },
 
   computed: {
-    gallary_id: {
+    gallery_id: {
       get() {
-        return this.$store.getters.get_gallary_id;
+        return this.$store.getters.get_gallery_id;
       },
       set(value) {
-        this.$store.commit("set_gallary_id", value);
+        this.$store.commit("set_gallery_id", value);
       },
     },
   },
@@ -32,7 +32,7 @@ export default {
     url_open() {
       // 링크 클릭시 해당 게시글로 크롬 브라우저 실행해 이동
       // ipc 이용하여 일렉트론 서버와 통신
-      ipcRenderer.send("open-link", this.gallary_id, this.value);
+      ipcRenderer.send("open-link", this.gallery_id, this.value);
     },
   },
 };

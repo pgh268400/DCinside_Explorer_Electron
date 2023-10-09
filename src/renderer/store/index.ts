@@ -5,14 +5,14 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
   state: {
-    gallary_id: "",
+    gallery_id: "",
   },
   getters: {
-    get_gallary_id: (state) => state.gallary_id,
+    get_gallery_id: (state) => state.gallery_id,
   },
   mutations: {
-    set_gallary_id(state, gallary_id) {
-      state.gallary_id = gallary_id;
+    set_gallery_id(state, gallery_id) {
+      state.gallery_id = gallery_id;
     },
   },
   actions: {},

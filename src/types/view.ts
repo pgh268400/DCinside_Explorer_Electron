@@ -5,7 +5,7 @@
 interface UserInput {
   search_type: string;
   repeat_cnt: number;
-  gallary_id: string;
+  gallery_id: string;
   keyword: string;
 }
 

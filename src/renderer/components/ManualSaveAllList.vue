@@ -41,7 +41,7 @@
                     justify-content: space-between;
                     align-items: center;
                   ">
-                  <span>갤러리 : {{ article.user_input.gallary_id }}</span>
+                  <span>갤러리 : {{ article.user_input.gallery_id }}</span>
                   <span>
                     <!-- 삭제 아이콘 추가 -->
                     <v-btn color="red" icon @click.stop="delete_article(index)">
@@ -91,9 +91,19 @@ export default defineComponent({
     return {
       selected_auto_save_data: null as Nullable<SaveArticleData>,
       is_open_save_data: false,
+      origin_gallery_id: "",
     };
   },
   computed: {
+    // Vuex 데이터 추가
+    gallery_id: {
+      get(): string {
+        return this.$store.getters.get_gallery_id;
+      },
+      set(value: string) {
+        this.$store.commit("set_gallery_id", value);
+      },
+    },
     // 부모에서 값을 자식에도 실시간 바인딩 시키려면 computed를 사용해야 한다.
     sync_is_open_dialog: {
       get(): boolean {
@@ -108,6 +118,14 @@ export default defineComponent({
     click_auto_save_item(article: SaveArticleData) {
       this.selected_auto_save_data = article;
       this.is_open_save_data = !this.is_open_save_data;
+      //vuex 데이터에 갤러리 아이디를 반영해줘야 MainTable에서 갤러리 아이디를 제대로 가져올 수 있다.
+      // 어짜피 Vuex에서 전체적으로 통합적으로 관리되고 있기 때문에 이렇게 해도 무방하다.
+      // 괜히 props 내리려는 뻘짓을 시도 -.-
+      this.gallery_id = article.user_input.gallery_id;
+
+      // 원래의 갤러리 아이디를 저장해둔 상태서 바꾼다.
+      this.origin_gallery_id = this.gallery_id;
+      this.gallery_id = article.user_input.gallery_id;
     },
     delete_article(index: number) {
       // index 번을 삭제합니다 출력
@@ -119,6 +137,15 @@ export default defineComponent({
   },
   components: {
     SaveView,
+  },
+  // watch
+  watch: {
+    // 다이얼로그가 닫힐 때 갤러리 아이디를 원래대로 돌려놓는다.
+    is_open_save_data: function (new_val, old_val) {
+      if (new_val === false) {
+        this.gallery_id = this.origin_gallery_id;
+      }
+    },
   },
 });
 </script>
