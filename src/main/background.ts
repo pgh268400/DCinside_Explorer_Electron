@@ -160,6 +160,13 @@ app.on("ready", async () => {
         const g_type = parser.get_garllery_type();
         const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallery_id}&no=${no}`;
         shell.openExternal(url);
+      } else {
+        // parser 가 존재하지 않으면 검색을 하지 않은 상태에서 저장해둔 목록의 링크를 클릭했다는 것.
+        // parser 을 생성하고 해당 링크를 열어주도록 한다.
+        parser = await DCAsyncParser.create(gallery_id);
+        const g_type = parser.get_garllery_type();
+        const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallery_id}&no=${no}`;
+        shell.openExternal(url);
       }
     }
   );
