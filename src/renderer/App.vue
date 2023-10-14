@@ -630,6 +630,8 @@ export default Vue.extend({
     },
     search_keypress(e: KeyboardEvent) {
       if (e.key === "Enter") {
+        // 버튼이 로딩중이면 키 이벤트를 즉시 무시한다. (연타 방지)
+        if (this.search_btn.is_loading) return;
         e.preventDefault(); // Ensure it is only this code that runs
         this.search_btn_click();
         // alert("Enter was pressed was presses");

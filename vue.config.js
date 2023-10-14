@@ -3,6 +3,7 @@
 // https://github.com/neutrinojs/webpack-chain
 // 메모리 제한 관련 글
 
+// npm run electron:build -- --linux deb 리눅스 빌드 명령어
 const { defineConfig } = require("@vue/cli-service");
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");

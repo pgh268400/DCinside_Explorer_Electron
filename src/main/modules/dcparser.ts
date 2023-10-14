@@ -147,11 +147,11 @@ class DCAsyncParser {
       result[i] = await promise();
       await runNext();
     };
-    const runNext = async () => {
+    const run_next = async () => {
       const i = promises.length - tail.length;
       const promise = tail.shift();
       if (promise !== undefined) {
-        await execute(promise, i, runNext);
+        await execute(promise, i, run_next);
       }
     };
     let d = 0;
@@ -162,7 +162,7 @@ class DCAsyncParser {
         progress_callback((d * 100) / promises.length);
       });
     }
-    await Promise.all(head.map((promise, i) => execute(promise, i, runNext)));
+    await Promise.all(head.map((promise, i) => execute(promise, i, run_next)));
     return result;
   };
 
