@@ -45,23 +45,27 @@
                   <!-- 둘다 있다면 갤러리명(id명) 형태로 렌더링 -->
                   <span
                     v-if="!article.user_input.gallery_name"
-                    class="over_flow">
-                    갤러리 : {{ article.user_input.gallery_id }}
+                    class="over_flow show_anime">
+                    {{ article.user_input.gallery_id }}
                   </span>
                   <span
                     v-else-if="!article.user_input.gallery_id"
-                    class="over_flow">
-                    갤러리 : {{ article.user_input.gallery_name }}
+                    class="over_flow show_anime">
+                    {{ article.user_input.gallery_name }}
                   </span>
-                  <span v-else class="over_flow">
-                    <span>갤러리 : {{ article.user_input.gallery_name }}</span>
+                  <span v-else class="over_flow show_anime">
+                    <span>{{ article.user_input.gallery_name }}</span>
                     <span class="text-subtitle-1">
                       ({{ article.user_input.gallery_id }})
                     </span>
                   </span>
                   <span>
                     <!-- 삭제 아이콘 추가 -->
-                    <v-btn color="red" icon @click.stop="delete_article(index)">
+                    <v-btn
+                      id="delete_icon"
+                      color="red"
+                      icon
+                      @click.stop="delete_article(index)">
                       <v-icon>mdi-delete</v-icon>
                     </v-btn>
                   </span>
@@ -214,4 +218,20 @@ export default defineComponent({
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* .show_anime {
+  display: block;
+  white-space: nowrap;
+  width: auto;
+  transform: translateX(0%);
+  transition: 4s ease-in-out;
+} */
+
+/* .show_anime:hover {
+   transform: translateX(-100%); 
+  background: #ffffff;
+  position: absolute;
+  overflow: visible;
+  text-overflow: clip;
+} */
 </style>

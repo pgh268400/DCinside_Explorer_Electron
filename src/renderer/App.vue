@@ -274,6 +274,7 @@ export default Vue.extend({
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
       },
+      gallery_id: "",
       auto_save_data: [] as SaveArticleData[],
       drawer_items: [
         {
@@ -760,6 +761,11 @@ export default Vue.extend({
       // 버튼 로딩 완료 반영
       this.search_btn.is_loading = false;
 
+      // vuex 데이터에 갤러리 id 반영
+      // 검색이 완료된 후 vuex에 반영해야 유저가 검색 성공 이후에 갤러리 id를 바꿔도
+      // 프로그램이 망가지지 않음 (링크 열기)
+      this.vuex_gallery_id = this.gallery_id;
+
       // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
       if (this.settings.auto_save.auto_save_result) {
         // 먼저 설정 파일을 불러온다
@@ -823,7 +829,7 @@ export default Vue.extend({
   },
   computed: {
     // Vuex 데이터 추가
-    gallery_id: {
+    vuex_gallery_id: {
       get(): string {
         return this.$store.getters.get_gallery_id;
       },
