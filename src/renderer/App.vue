@@ -4,22 +4,16 @@
   <v-app>
     <!-- 상단바(앱바) -->
     <div style="user-select: none">
-      <v-app-bar
-        app
-        :color="theme_color"
-        id="appbar"
-        dark
-        @mousedown="start_drag"
-        @mousemove="drag"
-        @mouseup="end_drag"
-        @mouseleave="end_drag">
-        <v-app-bar-nav-icon @click="open_drawer"></v-app-bar-nav-icon>
+      <v-app-bar app :color="theme_color" id="appbar" dark class="yes-drag">
+        <v-app-bar-nav-icon
+          @click="open_drawer"
+          class="no-drag"></v-app-bar-nav-icon>
         <v-toolbar-title class="pl-1">{{ title }}</v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn icon @click="minimize_window">
+        <v-btn icon @click="minimize_window" class="no-drag">
           <v-icon>mdi-window-minimize</v-icon>
         </v-btn>
-        <v-btn icon @click="close_window">
+        <v-btn icon @click="close_window" class="no-drag">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-app-bar>
@@ -638,33 +632,6 @@ export default Vue.extend({
         // alert("Enter was pressed was presses");
       }
     },
-    start_drag(e: MouseEvent) {
-      if (e.button === 0) {
-        this.dragging = true;
-        this.startX = e.clientX;
-        this.startY = e.clientY;
-      }
-    },
-    drag(e: MouseEvent) {
-      if (this.dragging) {
-        const x = e.clientX - this.startX;
-        const y = e.clientY - this.startY;
-        this.offsetX = x;
-        this.offsetY = y;
-        if (this.offsetX || this.offsetY) {
-          // this.$refs.appBar.$el.style.transform = `translate(${x}px, ${y}px)`;
-          const window = remote.getCurrentWindow();
-          // eslint-disable-next-line prettier/prettier
-          window.setPosition(
-            window.getPosition()[0] + x,
-            window.getPosition()[1] + y
-          );
-        }
-      }
-    },
-    end_drag() {
-      this.dragging = false;
-    },
     string_to_query(selected_items: string): string {
       const query_match_ui: any = {
         "제목+내용": "search_subject_memo",
@@ -850,6 +817,19 @@ export default Vue.extend({
 </script>
 
 <style scoped>
+/*
+  드래그 옵션, 일렉트론의 frame : false 와 조합해야만 유효하며,
+  드래그 될 대상에는 웹킷 drag 옵션을 줘야 그것으로 창을 옮길 수 있고
+  버튼 같은 상호 작용 요소엔 no-drag를 줘야 클릭이 정상적으로 된다.
+*/
+.yes-drag {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
 /* 카드 뾰족하게 */
 .v-sheet.v-card {
   border-radius: 0px;
