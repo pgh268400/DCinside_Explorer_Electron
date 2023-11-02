@@ -114,6 +114,8 @@ app.on("activate", () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on("ready", async () => {
+  app.commandLine.appendSwitch("--max-old-space-size", "4096"); // 4GB heap size
+
   if (isDevelopment && !process.env.IS_TEST) {
     // Install Vue Devtools
     try {

@@ -31,7 +31,8 @@
             shaped
             elevation="3"
             class="mb-5 ml-2 mr-2"
-            @click="click_auto_save_item(article)">
+            @click="click_auto_save_item(article)"
+            @mousedown.right="mouse_right(article)">
             <v-list-item>
               <v-list-item-content>
                 <v-list-item-title
@@ -142,7 +143,7 @@ export default defineComponent({
     click_auto_save_item(article: SaveArticleData) {
       this.selected_auto_save_data = article;
       this.is_open_save_data = !this.is_open_save_data;
-      //vuex 데이터에 갤러리 아이디를 반영해줘야 MainTable에서 갤러리 아이디를 제대로 가져올 수 있다.
+      // vuex 데이터에 갤러리 아이디를 반영해줘야 MainTable에서 갤러리 아이디를 제대로 가져올 수 있다.
       // 어짜피 Vuex에서 전체적으로 통합적으로 관리되고 있기 때문에 이렇게 해도 무방하다.
       // 괜히 props 내리려는 뻘짓을 시도 -.-
       this.gallery_id = article.user_input.gallery_id;
@@ -150,6 +151,25 @@ export default defineComponent({
       // 원래의 갤러리 아이디를 저장해둔 상태서 바꾼다.
       this.origin_gallery_id = this.gallery_id;
       this.gallery_id = article.user_input.gallery_id;
+    },
+    mouse_right(article: SaveArticleData) {
+      const gallery_id = article.user_input.gallery_id;
+      // id를 복사하고 toast 메시지를 띄운다.
+      navigator.clipboard.writeText(gallery_id);
+      this.$toast(`갤러리 ID ${gallery_id}를 복사했습니다.`, {
+        position: "bottom-center",
+        timeout: 718,
+        closeOnClick: true,
+        pauseOnFocusLoss: true,
+        pauseOnHover: false,
+        draggable: true,
+        draggablePercent: 0.6,
+        showCloseButtonOnHover: true,
+        hideProgressBar: true,
+        closeButton: "button",
+        icon: true,
+        rtl: false,
+      } as any);
     },
     delete_article(index: number) {
       // index 번을 삭제합니다 출력
