@@ -47,6 +47,9 @@ async function createWindow() {
       contextIsolation: false,
       enableRemoteModule: true,
     },
+    // 창의 최소 크기를 정해서 UI가 깨지지 않도록 한다
+    minWidth: 800,
+    minHeight: 780,
   });
 
   // 메뉴바 숨기기
