@@ -355,6 +355,10 @@ export default Vue.extend({
 
   // 종료 직전에 실행되는 함수
   async beforeDestroy() {
+    // 검색중에 강제 종료하면 파일에 저장하지 않는다. (버그 방지용)
+    if (this.search_btn.is_loading) {
+      return;
+    }
     await this.save_data_on_disk();
   },
 
