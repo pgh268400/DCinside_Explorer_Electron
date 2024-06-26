@@ -256,6 +256,7 @@ import { Nullable } from "../types/default";
 import MainTable from "./components/MainTable.vue";
 import AboutDialog from "./components/AboutDialog.vue";
 import LoadInterface from "./components/LoadInterface.vue";
+import path from "path";
 
 export default Vue.extend({
   name: "App",
@@ -263,7 +264,8 @@ export default Vue.extend({
     return {
       title: "DCInside Explorer",
       theme_color: "#3B4890", // 프로그램 테마 색상
-      save_file_location: "dc_data.json", // 프로그램 설정 파일 이름
+
+      base_folder_location: "./dc_config", // 프로그램 설정 파일이 저장될 폴더 이름
       select_box: {
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
@@ -287,11 +289,15 @@ export default Vue.extend({
           action: DrawerAction.About,
         },
       ],
+
       selected_auto_save_data: null as Nullable<SaveArticleData>,
 
-      // RAM 상에서 저장될 자동 / 수동 저장 데이터
-      // 원래는 불러올때마다 파일에서 불러왔지만 그러면
-      // 속도저하가 커서 불러올때는 RAM에서 보여주고, 저장은 파일에 저장하는 방식으로 변경
+      /*
+        RAM 상에서 저장될 자동 / 수동 저장 데이터
+        원래는 불러올때마다 파일(디스크)에서 불러왔지만 그러면
+        속도저하가 커서 불러올때는 RAM에서 보여주고, 
+        저장은 파일에 저장하는 방식으로 변경
+      */
       save_data: {
         auto_save: [] as SaveArticleData[],
         manual_save: [] as SaveArticleData[],
@@ -315,12 +321,6 @@ export default Vue.extend({
       progress_value: "",
       loading_text_data: "",
 
-      // =========================================================================
-      dragging: false,
-      offsetX: 0,
-      offsetY: 0,
-      startX: 0,
-      startY: 0,
       // =========================================================================
       is_open_settings: false, // 설정창 다이얼로그
       is_open_about: false, // 정보 다이얼로그
@@ -366,7 +366,7 @@ export default Vue.extend({
     // 가장 초기에 파일을 불러오기 위해 호출되는 함수(mounted에서 사용)
     async load_init_data() {
       // 초기 파일이 없으면 생성하는 함수 호출
-      await this.make_settings_file(this.save_file_location, {
+      await this.make_settings_file(this.setting_file_location, {
         // v-select는 첫 번째 아이템으로 기본값 설정
         search_type: this.select_box.items[0],
         repeat_cnt: this.repeat_cnt,
@@ -392,7 +392,7 @@ export default Vue.extend({
       // 설정 파일을 불러오고 UI에 반영한다
       try {
         const data = await fs.promises.readFile(
-          this.save_file_location,
+          this.setting_file_location,
           "utf-8"
         );
         const parsed_data: SaveData = JSON.parse(data);
@@ -413,10 +413,6 @@ export default Vue.extend({
       } catch (err) {
         console.log("설정 파일을 불러오는 중 오류가 발생했습니다.");
         console.error(err);
-
-        // 설정 파일을 불러오는데 문제가 생기면 설정 파일을 지우고 다시 재귀적으로 호출한다
-        // await fs.promises.unlink(this.save_file_location);
-        // await this.load_init_data();
       }
     },
     async delete_article(obj: any) {
@@ -431,7 +427,7 @@ export default Vue.extend({
 
       try {
         const data = await fs.promises.readFile(
-          this.save_file_location,
+          this.setting_file_location,
           "utf-8"
         );
         const parsed_data: SaveData = JSON.parse(data);
@@ -454,7 +450,7 @@ export default Vue.extend({
         // 파일에 쓰기
         const json_data = JSON.stringify(parsed_data, null, 2); // 데이터를 JSON 문자열로 변환하고 가독성을 위해 두 번째 매개변수로 null, 2를 전달
         await fs.promises.writeFile(
-          this.save_file_location,
+          this.setting_file_location,
           json_data,
           "utf-8"
         ); // 파일에 JSON 데이터 쓰기
@@ -467,6 +463,16 @@ export default Vue.extend({
       safe_file_location: string,
       save_obj_data: SaveData
     ) {
+      // 인자는 일반적으로 ./폴더명/세팅 파일명.json 으로 들어온다.
+
+      // 디렉토리 경로를 추출
+      const dir = path.dirname(safe_file_location);
+
+      // 디렉토리가 존재하지 않으면 생성
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
       // 설정 파일이 없다면 생성한다.
       if (!fs.existsSync(safe_file_location)) {
         try {
@@ -481,16 +487,18 @@ export default Vue.extend({
       }
     },
 
-    // 해당 함수는 수동 저장 버튼을 누를 때마다 호출된다.
-    // 참고로 버튼을 연타하니깐 race condition 인지 몰라도
-    // Json.Parse 부분에서 오류가 발생해서 버튼을 연타하지 못하도록
-    // 변경했다. (수동 저장이 다 이루어지기 전까진 버튼이 로딩 상태로 변함)
+    /*
+      해당 함수는 수동 저장 버튼을 누를 때마다 호출된다.
+      참고로 버튼을 연타하니깐 race condition 인지 몰라도
+      Json.Parse 부분에서 오류가 발생해서 버튼을 연타하지 못하도록 변경했다. 
+      (수동 저장이 다 이루어지기 전까진 버튼이 로딩 상태로 변함)
+    */
     async save_manual_data() {
       try {
         this.save_button.is_loading = true; // 버튼을 로딩 상태로 변경
         // 먼저 설정 파일을 불러온다
         const data = await fs.promises.readFile(
-          this.save_file_location,
+          this.setting_file_location,
           "utf-8"
         );
         // data를 json으로 파싱한다
@@ -519,7 +527,7 @@ export default Vue.extend({
 
         try {
           // JSON 데이터를 파일에 씁니다.
-          await fs.promises.writeFile(this.save_file_location, json_data);
+          await fs.promises.writeFile(this.setting_file_location, json_data);
           console.log(
             "[수동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
           );
@@ -555,7 +563,11 @@ export default Vue.extend({
       // 종료 직전에 프로그램의 입력 데이터를 저장한다.
       // 현재 dc_data.json 에 저장된 데이터를 불러온다.
       let auto_article_data: SaveArticleData[] = [];
-      const current_data = await fs.promises.readFile("dc_data.json", "utf-8");
+      const current_data = await fs.promises.readFile(
+        this.setting_file_location,
+        "utf-8"
+      );
+
       const parsed_data: SaveData = JSON.parse(current_data);
       if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
         auto_article_data = parsed_data.auto_save;
@@ -590,7 +602,7 @@ export default Vue.extend({
 
       try {
         await fs.promises.writeFile(
-          this.save_file_location,
+          this.setting_file_location,
           // 들여쓰기까지 포함해 깔끔하게 저장
           JSON.stringify(data, null, 2)
         );
@@ -736,7 +748,7 @@ export default Vue.extend({
       if (this.settings.auto_save.auto_save_result) {
         // 먼저 설정 파일을 불러온다
         const data = (
-          await fs.promises.readFile(this.save_file_location)
+          await fs.promises.readFile(this.setting_file_location)
         ).toString();
 
         // data를 json으로 파싱한다
@@ -751,12 +763,6 @@ export default Vue.extend({
 
         // 저장하려는 데이터 내용이 비었으면 자동 저장하지 않는다.
         if (items.length === 0) return;
-
-        // 갯수 제한에 걸리면 맨 뒷 요소를 제거함 (추가는 뒤에다가 계속함)
-        // 이러면 자동 저장 개수 제한이 크게 의미가 없는 거 같아서 일단 주석처리
-        // if (parsed_data.auto_save.length >= limit) {
-        //   parsed_data.auto_save.pop();
-        // }
 
         // 개수 제한에 걸린다면 자동 저장 하지 않는다
         if (parsed_data.auto_save.length >= limit) return;
@@ -780,7 +786,7 @@ export default Vue.extend({
 
         try {
           // JSON 데이터를 파일에 씁니다.
-          await fs.promises.writeFile(this.save_file_location, json_data);
+          await fs.promises.writeFile(this.setting_file_location, json_data);
           console.log(
             "[자동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
           );
@@ -794,6 +800,26 @@ export default Vue.extend({
     },
   },
   computed: {
+    /*
+      base_folder_location 변수를 참조해 사용하려면
+      data() 안에서 바로 사용하면 안된다. 
+      data 안에 있는 값을 서로 사용하려면 data 객체가 완전히 초기화 되고 나서 사용해야 한다.
+      computed 안에서 사용시 data 항목이 모두 초기화된 후에 계산된 값을 얻을 수 있기에 문제 해결이 가능하다.
+
+      또한 return type string 을 명시적으로 지정해줘야 오류가 안난다.
+
+      TypeScript는 Vue의 computed 속성 안에서 this의 타입을 자동으로 추론하지 못할 때가 있습니다. 
+      특히, Vue의 data 함수 안에서 정의된 속성들을 참조할 때 이런 문제가 발생할 수 있습니다.
+      TypeScript는 this가 무엇을 가리키는지 정확히 알 수 있어야 하는데, 
+      Vue의 컴포넌트 내부에서는 this가 굉장히 유연하게 사용되기 때문에 TypeScript가 정확히 추론하기 어려울 때가 있습니다. 
+      이런 경우에는 개발자가 명시적으로 타입을 지정해 주어야 합니다.
+
+      by GPT4o : 정확한 내용은 검증이 필요.
+    */
+    setting_file_location(): string {
+      return `${this.base_folder_location}/settings.json`;
+    },
+
     // Vuex 데이터 추가
     vuex_gallery_id: {
       get(): string {
