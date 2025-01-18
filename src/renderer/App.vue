@@ -262,7 +262,7 @@ export default Vue.extend({
   name: "App",
   data() {
     return {
-      title: "DCInside Explorer",
+      title: "DCInside Explorer", // 프로그램 창 타이틀에 사용하는 변수
       theme_color: "#3B4890", // 프로그램 테마 색상
 
       base_folder_location: "./dc_config", // 프로그램 설정 파일이 저장될 폴더 이름
@@ -295,8 +295,10 @@ export default Vue.extend({
       /*
         RAM 상에서 저장될 자동 / 수동 저장 데이터
         원래는 불러올때마다 파일(디스크)에서 불러왔지만 그러면
-        속도저하가 커서 불러올때는 RAM에서 보여주고, 
-        저장은 파일에 저장하는 방식으로 변경
+        속도저하가 커서 프로그램 첫 시작시에만 디스크 불러와 해당 변수(RAM) 에 저장해두고,
+        이후에 불러올때는 해당 변수(RAM)에서 보여주는 방식으로 변경. 
+        저장시엔 변수에 저장된 데이터를 디스크에 저장.
+        OS에 흔히 쓰이는 버퍼 기법.
       */
       save_data: {
         auto_save: [] as SaveArticleData[],
@@ -327,6 +329,8 @@ export default Vue.extend({
       is_open_drawer: false, // 왼쪽위 석삼자 네비게이션 서랍
       is_open_load: false, // 불러오기 다이얼로그
       is_open_save_data: false, // 불러오기 안의 자동 저장 목록 다이얼로그
+      // =========================================================================
+
       filter_text: "",
       settings: {
         program_entire_settings: {
