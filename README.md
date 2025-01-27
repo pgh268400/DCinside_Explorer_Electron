@@ -57,3 +57,6 @@ npm run electron:build
 
 exe 빌드를 원하면 위 명령어를 입력합니다.  
 결과물은 `dist_electron` 폴더에 저장됩니다.
+
+## 기능 향상
+현재 node.js v22, vue3, vite로 마이그레이션을 계획중이나 기존에 사용하던 vuetify 2, ag-grid-vue2 를 vuetify 3 및 ag-grid-vue3로 마이그레이션 하는 과정에서 vuetify의 css가 테이블 라이브러리의 css와 충돌하는 문제가 발생해서 마이그레이션 진행이 늦어지고 있습니다. 따라서 완전히 새로운 UI Framework 나 순수한 CSS로 마이그레이션을 진행 계획중이나 도구 사용 결정에 어려움을 겪고 있습니다.
