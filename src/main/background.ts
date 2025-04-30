@@ -52,10 +52,10 @@ async function createWindow() {
         일단 임시방편으로 이걸 활성화 하자.
       */
       sandbox: false,
-      // 안전을 위해 nodeIntegration을 비활성화
-      nodeIntegration: false,
-      // contextIsolation: true로 설정해 preload만 창과 통신하도록 한다
-      contextIsolation: true,
+      // 안전을 위해 nodeIntegration 비활성화
+      nodeIntegration: true,
+      // contextIsolation: true로 설정 => preload만 창과 통신
+      contextIsolation: false,
 
       // preload 스크립트 경로 지정
       preload: path.join(__dirname, "preload.js"),
