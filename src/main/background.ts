@@ -14,6 +14,7 @@ import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import { DCAsyncParser } from "./modules/dcparser";
 import { DCWebRequest, IPCChannel } from "@/types/ipc";
+import path from "path";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -33,23 +34,26 @@ protocol.registerSchemesAsPrivileged([
 async function createWindow() {
   // Create the browser window.
   const win = new BrowserWindow({
+    // 가로 & 세로 크기
     width: width,
     height: height,
-    // 윈도우 타이틀 바 지우기 (윈도우 창 테두리 지우기)
-    frame: false,
-    webPreferences: {
-      // Use pluginOptions.nodeIntegration, leave this alone
-      // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
-      // nodeIntegration: process.env
-      //   .ELECTRON_NODE_INTEGRATION as unknown as boolean,
-      // contextIsolation: !(process.env.ELECTRON_NODE_INTEGRATION as unknown) as boolean,
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true,
-    },
+
     // 창의 최소 크기를 정해서 UI가 깨지지 않도록 한다
     minWidth: 800,
     minHeight: 780,
+
+    // 윈도우 타이틀 바 지우기 (윈도우 창 테두리 지우기)
+    frame: false,
+
+    webPreferences: {
+      // 안전을 위해 nodeIntegration을 비활성화
+      nodeIntegration: false,
+      // contextIsolation: true로 설정해 preload만 창과 통신하도록 한다
+      contextIsolation: true,
+
+      // preload 스크립트 경로 지정
+      preload: path.join(__dirname, "preload.js"),
+    },
   });
 
   // 메뉴바 숨기기

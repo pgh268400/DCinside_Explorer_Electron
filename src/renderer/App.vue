@@ -354,7 +354,7 @@ export default Vue.extend({
 
   // 처음 실행시 실행되는 함수
   async mounted() {
-    this.load_init_data();
+    // this.load_init_data();
   },
 
   // 종료 직전에 실행되는 함수
