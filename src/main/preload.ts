@@ -1,4 +1,3 @@
-import { app } from "electron";
-app.commandLine.appendSwitch("js-flags", "--max-old-space-size=16384");
-
-console.log("preload.ts 실행됨");
+// src/main/preload.ts
+import { contextBridge, ipcRenderer } from "electron";
+console.log("✅ [preload] 로드 완료, __dirname:", __dirname);

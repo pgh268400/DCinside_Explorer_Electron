@@ -240,7 +240,7 @@
 </template>
 
 <script lang="ts">
-import { ipcRenderer, IpcRendererEvent, remote } from "electron";
+// import { ipcRenderer, IpcRendererEvent, remote } from "electron";
 import Vue from "vue";
 import { Article } from "../types/dcinside";
 import { DCWebRequest, IPCChannel } from "../types/ipc";
@@ -648,7 +648,7 @@ export default Vue.extend({
         // 버튼이 로딩중이면 키 이벤트를 즉시 무시한다. (연타 방지)
         if (this.search_btn.is_loading) return;
         e.preventDefault(); // Ensure it is only this code that runs
-        this.search_btn_click();
+        // this.search_btn_click();
         // alert("Enter was pressed was presses");
       }
     },
@@ -664,144 +664,144 @@ export default Vue.extend({
     },
     minimize_window() {
       // 현재 창 최소화
-      const window = remote.getCurrentWindow();
-      window.minimize();
+      // const window = remote.getCurrentWindow();
+      // window.minimize();
     },
     close_window() {
       // 확실한 종료 보장을 위해 일렉트론 백그라운드 서버와 IPC 통신으로 종료 요청
-      ipcRenderer.send(IPCChannel.CLOSE_ME);
+      // ipcRenderer.send(IPCChannel.CLOSE_ME);
     },
 
     // 검색 버튼 누를 시 실행되는 함수
-    async search_btn_click() {
-      // 여기서 그냥 웹 요청 보내면 CORS가 걸려서 ipc로 백그라운드 node.js 서버에서
-      // 웹 요청을 보내고 응답을 받아서 화면에 렌더링하는 방식으로 구현해야 함
+    // async search_btn_click() {
+    //   // 여기서 그냥 웹 요청 보내면 CORS가 걸려서 ipc로 백그라운드 node.js 서버에서
+    //   // 웹 요청을 보내고 응답을 받아서 화면에 렌더링하는 방식으로 구현해야 함
 
-      // 검색 버튼 누르면 기존 검색 결과 초기화
-      if (this.settings.user_preferences.clear_data_on_search)
-        this.table_rows = [];
+    //   // 검색 버튼 누르면 기존 검색 결과 초기화
+    //   if (this.settings.user_preferences.clear_data_on_search)
+    //     this.table_rows = [];
 
-      // 버튼에 로딩 상태 반영
-      this.search_btn.is_loading = true;
+    //   // 버튼에 로딩 상태 반영
+    //   this.search_btn.is_loading = true;
 
-      // 웹 요청 보내기
-      ipcRenderer.send(IPCChannel.WEB_REQUEST, {
-        id: this.gallery_id,
-        repeat_cnt: this.repeat_cnt,
-        keyword: this.keyword,
-        search_type: this.string_to_query(this.select_box.selected_item),
-        option: {
-          requests_limit: this.settings.program_entire_settings.max_parallel,
-        },
-      } as DCWebRequest);
+    //   // 웹 요청 보내기
+    //   ipcRenderer.send(IPCChannel.WEB_REQUEST, {
+    //     id: this.gallery_id,
+    //     repeat_cnt: this.repeat_cnt,
+    //     keyword: this.keyword,
+    //     search_type: this.string_to_query(this.select_box.selected_item),
+    //     option: {
+    //       requests_limit: this.settings.program_entire_settings.max_parallel,
+    //     },
+    //   } as DCWebRequest);
 
-      console.log({
-        id: this.gallery_id,
-        repeat_cnt: this.repeat_cnt,
-        keyword: this.keyword,
-        search_type: this.string_to_query(this.select_box.selected_item),
-      });
+    //   console.log({
+    //     id: this.gallery_id,
+    //     repeat_cnt: this.repeat_cnt,
+    //     keyword: this.keyword,
+    //     search_type: this.string_to_query(this.select_box.selected_item),
+    //   });
 
-      // 백그라운드 서버로부터 응답 받기
-      ipcRenderer.on(IPCChannel.WEB_RESPONSE, this.web_response_callback);
+    //   // 백그라운드 서버로부터 응답 받기
+    //   ipcRenderer.on(IPCChannel.WEB_RESPONSE, this.web_response_callback);
 
-      // 백그라운드 서버로부터 진행 상황 받기 (실제로는 콜백함수가 2번 실행되어 전달됨)
-      ipcRenderer.on(
-        IPCChannel.WEB_REQUEST_PROGRESS,
-        (event, progress: string, status: string) => {
-          this.progress_value = progress;
-          this.loading_text_data = status;
-        }
-      );
-    },
+    //   // 백그라운드 서버로부터 진행 상황 받기 (실제로는 콜백함수가 2번 실행되어 전달됨)
+    //   ipcRenderer.on(
+    //     IPCChannel.WEB_REQUEST_PROGRESS,
+    //     (event, progress: string, status: string) => {
+    //       this.progress_value = progress;
+    //       this.loading_text_data = status;
+    //     }
+    //   );
+    // },
 
     // 웹 응답 받아 처리하는 콜백 함수
-    async web_response_callback(event: IpcRendererEvent, result: Article[][]) {
-      console.log(result.length);
-      const items: AGGridVueArticle[] = [];
+    // async web_response_callback(event: IpcRendererEvent, result: Article[][]) {
+    //   console.log(result.length);
+    //   const items: AGGridVueArticle[] = [];
 
-      console.time("배열 삽입 시간 : ");
-      for (let article of result) {
-        if (article.length > 0) {
-          for (let item of article) {
-            items.push({
-              번호: item.gall_num,
-              제목: item.gall_tit,
-              댓글수: item.reply_num,
-              작성자: item.gall_writer,
-              조회수: item.gall_count,
-              추천: item.gall_recommend,
-              작성일: item.gall_date,
-            });
-          }
-        }
-      }
+    //   console.time("배열 삽입 시간 : ");
+    //   for (let article of result) {
+    //     if (article.length > 0) {
+    //       for (let item of article) {
+    //         items.push({
+    //           번호: item.gall_num,
+    //           제목: item.gall_tit,
+    //           댓글수: item.reply_num,
+    //           작성자: item.gall_writer,
+    //           조회수: item.gall_count,
+    //           추천: item.gall_recommend,
+    //           작성일: item.gall_date,
+    //         });
+    //       }
+    //     }
+    //   }
 
-      console.timeEnd("배열 삽입 시간 : ");
-      this.table_rows = items; //데이터 바인딩 (표 반영)
+    //   console.timeEnd("배열 삽입 시간 : ");
+    //   this.table_rows = items; //데이터 바인딩 (표 반영)
 
-      // 버튼 로딩 완료 반영
-      this.search_btn.is_loading = false;
+    //   // 버튼 로딩 완료 반영
+    //   this.search_btn.is_loading = false;
 
-      // vuex 데이터에 갤러리 id 반영
-      // 검색이 완료된 후 vuex에 반영해야 유저가 검색 성공 이후에 갤러리 id를 바꿔도
-      // 프로그램이 망가지지 않음 (링크 열기)
-      this.vuex_gallery_id = this.gallery_id;
+    //   // vuex 데이터에 갤러리 id 반영
+    //   // 검색이 완료된 후 vuex에 반영해야 유저가 검색 성공 이후에 갤러리 id를 바꿔도
+    //   // 프로그램이 망가지지 않음 (링크 열기)
+    //   this.vuex_gallery_id = this.gallery_id;
 
-      // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
-      if (this.settings.auto_save.auto_save_result) {
-        // 먼저 설정 파일을 불러온다
-        const data = (
-          await fs.promises.readFile(this.setting_file_location)
-        ).toString();
+    //   // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
+    //   if (this.settings.auto_save.auto_save_result) {
+    //     // 먼저 설정 파일을 불러온다
+    //     const data = (
+    //       await fs.promises.readFile(this.setting_file_location)
+    //     ).toString();
 
-        // data를 json으로 파싱한다
-        const parsed_data: SaveData = JSON.parse(data);
+    //     // data를 json으로 파싱한다
+    //     const parsed_data: SaveData = JSON.parse(data);
 
-        // auto_save 값이 없으면 빈 배열을 추가한다.
-        if (!parsed_data.auto_save) {
-          parsed_data.auto_save = [];
-        }
+    //     // auto_save 값이 없으면 빈 배열을 추가한다.
+    //     if (!parsed_data.auto_save) {
+    //       parsed_data.auto_save = [];
+    //     }
 
-        const limit = this.settings.auto_save.max_auto_save; // 자동 저장 갯수 제한
+    //     const limit = this.settings.auto_save.max_auto_save; // 자동 저장 갯수 제한
 
-        // 저장하려는 데이터 내용이 비었으면 자동 저장하지 않는다.
-        if (items.length === 0) return;
+    //     // 저장하려는 데이터 내용이 비었으면 자동 저장하지 않는다.
+    //     if (items.length === 0) return;
 
-        // 개수 제한에 걸린다면 자동 저장 하지 않는다
-        if (parsed_data.auto_save.length >= limit) return;
+    //     // 개수 제한에 걸린다면 자동 저장 하지 않는다
+    //     if (parsed_data.auto_save.length >= limit) return;
 
-        // 현재 검색한 내용을 auto_save에 기록한다.
-        parsed_data.auto_save.push({
-          user_input: {
-            search_type: this.select_box.selected_item,
-            repeat_cnt: this.repeat_cnt,
-            gallery_id: this.gallery_id,
-            keyword: this.keyword,
-          },
-          article_data: items,
-        });
+    //     // 현재 검색한 내용을 auto_save에 기록한다.
+    //     parsed_data.auto_save.push({
+    //       user_input: {
+    //         search_type: this.select_box.selected_item,
+    //         repeat_cnt: this.repeat_cnt,
+    //         gallery_id: this.gallery_id,
+    //         keyword: this.keyword,
+    //       },
+    //       article_data: items,
+    //     });
 
-        // 자동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
-        this.save_data.auto_save = parsed_data.auto_save;
+    //     // 자동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
+    //     this.save_data.auto_save = parsed_data.auto_save;
 
-        // parsed_data 객체를 JSON 문자열로 변환
-        const json_data = JSON.stringify(parsed_data, null, 2);
+    //     // parsed_data 객체를 JSON 문자열로 변환
+    //     const json_data = JSON.stringify(parsed_data, null, 2);
 
-        try {
-          // JSON 데이터를 파일에 씁니다.
-          await fs.promises.writeFile(this.setting_file_location, json_data);
-          console.log(
-            "[자동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
-          );
-        } catch (error) {
-          console.error(
-            "[자동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
-            error
-          );
-        }
-      }
-    },
+    //     try {
+    //       // JSON 데이터를 파일에 씁니다.
+    //       await fs.promises.writeFile(this.setting_file_location, json_data);
+    //       console.log(
+    //         "[자동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+    //       );
+    //     } catch (error) {
+    //       console.error(
+    //         "[자동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
+    //         error
+    //       );
+    //     }
+    //   }
+    // },
   },
   computed: {
     /*

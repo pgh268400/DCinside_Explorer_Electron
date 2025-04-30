@@ -25,6 +25,6 @@ const app = new Vue({
   render: (h) => h(App),
 }).$mount("#app");
 
-// 이걸 추가해야 Electron 이 통째로 종료될 때 Vue의 destroy 부분이 제대로 실행됨.
+// 이걸 추가해야 Electron 이 통째로 종료될 때 Vue의 destroy 부분이 제대로 실행된다.
 // https://github.com/nklayman/vue-cli-plugin-electron-builder/issues/389
 window.addEventListener("beforeunload", () => app.$destroy());

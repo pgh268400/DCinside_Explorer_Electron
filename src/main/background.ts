@@ -46,6 +46,12 @@ async function createWindow() {
     frame: false,
 
     webPreferences: {
+      /*
+        이 옵션이 있어야 __dirname이 제대로 동작해서 preload를 load 할 수 있다.
+        보안을 위해 sandbox가 기본 true로 설정되어 __dirname이 동작하지 않던 것으로,
+        일단 임시방편으로 이걸 활성화 하자.
+      */
+      sandbox: false,
       // 안전을 위해 nodeIntegration을 비활성화
       nodeIntegration: false,
       // contextIsolation: true로 설정해 preload만 창과 통신하도록 한다
