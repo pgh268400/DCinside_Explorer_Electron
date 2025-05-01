@@ -1,0 +1,9 @@
+/* 시스템 폰트만 쓸때는 @font-face는 생략 가능 */
+/* 전역 루트에 맑은 고딕을 기본 폰트로 지정 */
+html,
+body,
+#app,
+.v-application,
+[class*="ag-theme-"] {
+  font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
+}
