@@ -803,6 +803,7 @@ export default Vue.extend({
       }
     },
   },
+
   computed: {
     /*
       base_folder_location 변수를 참조해 사용하려면

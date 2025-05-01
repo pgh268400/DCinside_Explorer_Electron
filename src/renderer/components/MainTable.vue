@@ -99,6 +99,8 @@ import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
 import { defineComponent } from "vue";
 import { AgGridVue } from "ag-grid-vue";
 import CustomLinkRenderer from "./CustomLinkRenderer.vue";
+import SpoilerRenderer from "./SpoilerRenderer.vue";
+
 // 컴포넌트 만들 시 defineComponent() 로 반드시 묶어줘야 한다.
 export default defineComponent({
   // 상위 컴포넌트에서 전달받는 props
@@ -151,7 +153,12 @@ export default defineComponent({
             cellRendererParams: "",
             // filter: "agNumberColumnFilter",
           },
-          { field: "제목", flex: 1, filter: "agTextColumnFilter" },
+          {
+            field: "제목",
+            flex: 1,
+            filter: "agTextColumnFilter",
+            cellRendererFramework: "SpoilerRenderer",
+          },
           {
             field: "댓글수",
             width: 70,
@@ -306,6 +313,8 @@ export default defineComponent({
     // 갤러리 번호 클릭시 새 탭으로 열기 위한 커스텀 컴포넌트 (필수)
     // eslint-disable-next-line vue/no-unused-components
     CustomLinkRenderer,
+    // eslint-disable-next-line vue/no-unused-components
+    SpoilerRenderer,
     AgGridVue,
   },
 });
