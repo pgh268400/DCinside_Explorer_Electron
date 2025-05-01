@@ -8,7 +8,7 @@
       </v-toolbar>
       <div class="pa-4 text-center">
         <v-subheader class="justify-center">
-          디시인사이드 초고속 글 검색기
+          <span class="rainbow-text">디시인사이드 초고속 글 검색기</span>
         </v-subheader>
         <v-list-item class="justify-center">
           <img
@@ -21,7 +21,7 @@
           <v-list-item-content class="pb-0">
             <v-list-item-title class="font-weight-bold">
               <a @click="open_about_link" style="text-decoration: underline">
-                Copyright 2023. File(pgh268400)
+                Copyright 2025. File(pgh268400)
                 <br />
                 ALL RIGHTS RESERVED.
               </a>
@@ -63,4 +63,38 @@ export default defineComponent({
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.rainbow-text {
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  text-decoration: underline;
+
+  /* 무지개 배경 그라디언트 */
+  background: linear-gradient(
+    to right,
+    #6666ff,
+    #0099ff,
+    #00ff00,
+    #ff3399,
+    #6666ff
+  );
+  background-size: 400% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+
+  /* 부드럽게 흐르는 애니메이션 */
+  animation: rainbow-animation 8s ease-in-out infinite;
+}
+
+@keyframes rainbow-animation {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+}
+</style>

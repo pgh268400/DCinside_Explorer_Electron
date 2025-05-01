@@ -22,11 +22,10 @@ const width = 1275 + 400;
 
 const height = 840;
 
-// 메모리 제한 조정
-// const mem_limit = 8192;
-// app.commandLine.appendSwitch("js-flags", `--max-old-space-size=${mem_limit}`);
+// Vue 2 Legacy DevTools의 Web Store ID
+const LEGACY_VUE2_DEVTOOLS_ID = "iaajmlceplecbljialhhkmedjlpdblhp";
 
-// Scheme must be registered before the app is ready
+// 스키마는 반드시 app이 ready 되기 전에 등록되어야 한다.
 protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } },
 ]);
@@ -52,12 +51,15 @@ async function createWindow() {
         일단 임시방편으로 이걸 활성화 하자.
       */
       sandbox: false,
-      // 안전을 위해 nodeIntegration 비활성화
+
+      /*
+        안전을 위해선 보안 권고 사항이 nodeIntegration 비활성화, contextIsolation 활성화이나
+        현재 Electron 구버전으로 작업된 코드를 마이그레이션 하는 과정에서 문제가 많아서 그냥 true / false로 임시 조치하였다.
+      */
       nodeIntegration: true,
-      // contextIsolation: true로 설정 => preload만 창과 통신
       contextIsolation: false,
 
-      // preload 스크립트 경로 지정
+      // preload 스크립트 경로 지정, sandbox : false여야만 preload가 제대로 로드된다.
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -108,35 +110,35 @@ async function createWindow() {
   // });
 }
 
-// Quit when all windows are closed.
+// 모든 창이 닫혔을 때 앱 종료
 app.on("window-all-closed", () => {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
+  // macOS에서는 보통 사용자가 Cmd + Q를 눌러 명시적으로 종료하기 전까지
+  // 애플리케이션과 메뉴 바가 계속 활성화된 상태로 유지된다
   if (process.platform !== "darwin") {
-    app.quit();
+    app.quit(); // macOS가 아닌 경우, 앱을 종료한다
   }
 });
 
 app.on("activate", () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
+  // macOS에서는 Dock 아이콘을 클릭했을 때,
+  // 열려 있는 창이 없다면 새 창을 다시 생성하는 것이 일반적인 동작이다.
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
+/*
+  이 메서드는 Electron이 초기화를 모두 마치고
+  브라우저 창을 생성할 준비가 되었을 때 호출된다.
+  일부 API는 이 이벤트 이후에만 사용할 수 있다.
+*/
 app.on("ready", async () => {
-  app.commandLine.appendSwitch("--max-old-space-size", "4096"); // 4GB heap size
-
-  if (isDevelopment && !process.env.IS_TEST) {
-    // Install Vue Devtools
-    try {
-      await installExtension(VUEJS_DEVTOOLS);
-    } catch (e: any) {
-      console.error("Vue Devtools failed to install:", e.toString());
-    }
-  }
+  // if (isDevelopment && !process.env.IS_TEST) {
+  //   // Vue Devtools Legacy 버전 설치 - Vue2를 사용중이기 때문
+  //   try {
+  //     await installExtension(LEGACY_VUE2_DEVTOOLS_ID);
+  //   } catch (e: any) {
+  //     console.error("❌ Vue DevTools 설치 실패:", e.toString());
+  //   }
+  // }
   createWindow();
 
   // 파싱 객체를 ipcMain 에서 전역적으로 사용할 수 있도록 한다.
