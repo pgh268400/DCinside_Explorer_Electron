@@ -213,21 +213,26 @@ export default defineComponent({
       ipcRenderer.send(IPCChannel.GET_GALLERY_TEXT_NAME_REQ, id_dict);
 
       // 데이터를 수신받는다.
-      ipcRenderer.on(IPCChannel.GET_GALLERY_TEXT_NAME_RES, (event, id_dict) => {
-        console.log("Get Gallery Text Name Response", id_dict);
-        // 들어온 데이터에 맞게 갤러리 이름을 바꿔준다.
-        // 변수에 바로 반영하면 데이터 바인딩에 의해 table의 입력값이 영향을 받는다.
-        // 보여주기 전용의 key를 하나 더 save_data에 넣어줘야 한다.
+      // watch 역시 데이터 변경에 따라 반복해서 등작하기에 이벤트 리스너를 .on() 으로 등록시키면
+      // 함수가 누적 실행되기에 절대 사용하면 안돼고 .once() 를 써야 한다
+      ipcRenderer.once(
+        IPCChannel.GET_GALLERY_TEXT_NAME_RES,
+        (event, id_dict) => {
+          console.log("Get Gallery Text Name Response", id_dict);
+          // 들어온 데이터에 맞게 갤러리 이름을 바꿔준다.
+          // 변수에 바로 반영하면 데이터 바인딩에 의해 table의 입력값이 영향을 받는다.
+          // 보여주기 전용의 key를 하나 더 save_data에 넣어줘야 한다.
 
-        for (const element of this.save_data) {
-          if (element.user_input.gallery_id in id_dict) {
-            element.user_input.gallery_name =
-              id_dict[element.user_input.gallery_id];
-            // element.user_input.gallery_id =
-            //   id_dict[element.user_input.gallery_id];
+          for (const element of this.save_data) {
+            if (element.user_input.gallery_id in id_dict) {
+              element.user_input.gallery_name =
+                id_dict[element.user_input.gallery_id];
+              // element.user_input.gallery_id =
+              //   id_dict[element.user_input.gallery_id];
+            }
           }
         }
-      });
+      );
     },
   },
 });

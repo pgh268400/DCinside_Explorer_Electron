@@ -15,6 +15,11 @@ import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import { DCAsyncParser } from "./modules/dcparser";
 import { DCWebRequest, IPCChannel } from "@/types/ipc";
 import path from "path";
+import {
+  delete_search_log,
+  load_search_logs,
+  save_search_log,
+} from "./modules/sqlite3";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -205,6 +210,35 @@ app.on("ready", async () => {
       event.sender.send(IPCChannel.GET_GALLERY_TEXT_NAME_RES, id_dict);
     }
   );
+});
+
+// IPC 핸들러 등록
+ipcMain.handle(
+  "db-save-search-log",
+  async (_event, { isManual, meta, articles }) => {
+    try {
+      save_search_log(isManual, meta, articles);
+      return { success: true };
+    } catch (err: any) {
+      console.error("[db-save-search-log] 오류 발생:", err);
+      return { success: false, error: err.message };
+    }
+  }
+);
+
+ipcMain.handle("db-load-search-logs", async () => {
+  const logs = load_search_logs();
+  return logs;
+});
+
+ipcMain.handle("db-delete-search-log", async (_evt, sessionId: number) => {
+  try {
+    delete_search_log(sessionId);
+    return { success: true };
+  } catch (err: any) {
+    console.error("[db-delete-search-log] 오류 발생:", err);
+    return { success: false, error: err.message };
+  }
 });
 
 // Exit cleanly on request from parent process in development mode.

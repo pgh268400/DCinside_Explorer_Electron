@@ -43,8 +43,8 @@ interface Settings {
 // json 파일에 저장할 데이터 타입 정의
 interface SaveData extends UserInput {
   settings: Settings;
-  auto_save?: SaveArticleData[];
-  manual_save?: SaveArticleData[];
+  // auto_save?: SaveArticleData[];
+  // manual_save?: SaveArticleData[];
 }
 
 // AGGridVue 에 출력할 데이터 타입 정의

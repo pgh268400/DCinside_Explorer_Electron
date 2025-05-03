@@ -296,7 +296,7 @@ export default Vue.extend({
         RAM 상에서 저장될 자동 / 수동 저장 데이터
         원래는 불러올때마다 파일(디스크)에서 불러왔지만 그러면
         속도저하가 커서 프로그램 첫 시작시에만 디스크 불러와 해당 변수(RAM) 에 저장해두고,
-        이후에 불러올때는 해당 변수(RAM)에서 보여주는 방식으로 변경. 
+        이후에 불러올때는 해당 변수(RAM)에서 보여주는 방식으로 변경.
         저장시엔 변수에 저장된 데이터를 디스크에 저장.
         OS에 흔히 쓰이는 버퍼 기법.
       */
@@ -354,7 +354,8 @@ export default Vue.extend({
 
   // 처음 실행시 실행되는 함수
   async mounted() {
-    this.load_init_data();
+    this.initialize_ui(); // UI 설정 저장 파일 없으면 생성 & 있으면 로드
+    // await this.load_article_db(); // SQLite 글 데이터 로드
   },
 
   // 종료 직전에 실행되는 함수
@@ -363,13 +364,13 @@ export default Vue.extend({
     if (this.search_btn.is_loading) {
       return;
     }
-    await this.save_data_on_disk();
+    await this.save_ui_data();
   },
 
   methods: {
-    // 가장 초기에 파일을 불러오기 위해 호출되는 함수(mounted에서 사용)
-    async load_init_data() {
-      // 초기 파일이 없으면 생성하는 함수 호출
+    // 가장 초기에 UI 설정 파일을 준비하기 위해 호출되는 함수(mounted에서 사용)
+    async initialize_ui() {
+      // 파일이 없으면 우선적으로 생성
       await this.make_settings_file(this.setting_file_location, {
         // v-select는 첫 번째 아이템으로 기본값 설정
         search_type: this.select_box.items[0],
@@ -388,10 +389,8 @@ export default Vue.extend({
             auto_save_result: this.settings.auto_save.auto_save_result,
             max_auto_save: this.settings.auto_save.max_auto_save,
           },
-        } as Settings,
-        auto_save: [],
-        manual_save: [],
-      } as SaveData);
+        },
+      });
 
       // 설정 파일을 불러오고 UI에 반영한다
       try {
@@ -407,181 +406,187 @@ export default Vue.extend({
         this.select_box.selected_item = parsed_data.search_type;
         this.settings = parsed_data.settings;
 
-        // 설정 파일을 불러오면서 저장 데이터도 반영한다
-        // (위에서 auto_save, manual_save는 없으면 무조건 생성하므로 null이 될 수 없다.)
-        this.save_data.auto_save = parsed_data.auto_save as SaveArticleData[];
-        this.save_data.manual_save =
-          parsed_data.manual_save as SaveArticleData[];
-
         console.log("설정 파일을 성공적으로 불러왔습니다.");
-      } catch (err) {
-        console.log("설정 파일을 불러오는 중 오류가 발생했습니다.");
-        console.error(err);
+      } catch (e) {
+        console.log("설정 파일을 불러오는 중 오류가 발생했습니다.", e);
       }
     },
+
     async delete_article(obj: any) {
-      console.log(obj);
-
-      // 삭제 버튼을 연타하면 오류가 발생하므로 연타를 못하게 바로 데이터 상에서 날려버린다.
-      if (obj.type === "manual") {
-        this.save_data.manual_save.splice(obj.index, 1); // RAM 상에서도 삭제
-      } else {
-        this.save_data.auto_save.splice(obj.index, 1); // RAM 상에서도 삭제
-      }
-
-      try {
-        const data = await fs.promises.readFile(
-          this.setting_file_location,
-          "utf-8"
-        );
-        const parsed_data: SaveData = JSON.parse(data);
-
-        if (!parsed_data.auto_save)
-          throw new Error("오류 : auto_save 데이터가 존재하지 않습니다");
-
-        if (!parsed_data.manual_save)
-          throw new Error("오류 : manual_save 데이터가 존재하지 않습니다");
-
-        // 인덱스에 해당하는 데이터 삭제
-        // 자바스크립트에서 splice는 원본 배열을 수정한다.
-
-        if (obj.type === "manual") {
-          parsed_data.manual_save.splice(obj.index, 1);
-        } else {
-          parsed_data.auto_save.splice(obj.index, 1);
-        }
-
-        // 파일에 쓰기
-        const json_data = JSON.stringify(parsed_data, null, 2); // 데이터를 JSON 문자열로 변환하고 가독성을 위해 두 번째 매개변수로 null, 2를 전달
-        await fs.promises.writeFile(
-          this.setting_file_location,
-          json_data,
-          "utf-8"
-        ); // 파일에 JSON 데이터 쓰기
-      } catch (error: any) {
-        console.log(error);
-      }
+      // console.log(obj);
+      // // 삭제 버튼을 연타하면 오류가 발생하므로 연타를 못하게 바로 데이터 상에서 날려버린다.
+      // if (obj.type === "manual") {
+      //   this.save_data.manual_save.splice(obj.index, 1); // RAM 상에서도 삭제
+      // } else {
+      //   this.save_data.auto_save.splice(obj.index, 1); // RAM 상에서도 삭제
+      // }
+      // try {
+      //   const data = await fs.promises.readFile(
+      //     this.setting_file_location,
+      //     "utf-8"
+      //   );
+      //   const parsed_data: SaveData = JSON.parse(data);
+      //   if (!parsed_data.auto_save)
+      //     throw new Error("오류 : auto_save 데이터가 존재하지 않습니다");
+      //   if (!parsed_data.manual_save)
+      //     throw new Error("오류 : manual_save 데이터가 존재하지 않습니다");
+      //   // 인덱스에 해당하는 데이터 삭제
+      //   // 자바스크립트에서 splice는 원본 배열을 수정한다.
+      //   if (obj.type === "manual") {
+      //     parsed_data.manual_save.splice(obj.index, 1);
+      //   } else {
+      //     parsed_data.auto_save.splice(obj.index, 1);
+      //   }
+      //   // 파일에 쓰기
+      //   const json_data = JSON.stringify(parsed_data, null, 2); // 데이터를 JSON 문자열로 변환하고 가독성을 위해 두 번째 매개변수로 null, 2를 전달
+      //   await fs.promises.writeFile(
+      //     this.setting_file_location,
+      //     json_data,
+      //     "utf-8"
+      //   ); // 파일에 JSON 데이터 쓰기
+      // } catch (error: any) {
+      //   console.log(error);
+      // }
     },
+
     // 초기 파일이 없으면 생성하는 함수
     async make_settings_file(
-      safe_file_location: string,
+      safe_file_location: string, // 일반적으로 ./폴더명/세팅 파일명.json 형태로 들어온다.
       save_obj_data: SaveData
     ) {
-      // 인자는 일반적으로 ./폴더명/세팅 파일명.json 으로 들어온다.
-
       // 디렉토리 경로를 추출
       const dir = path.dirname(safe_file_location);
 
-      // 디렉토리가 존재하지 않으면 생성
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      try {
+        // 디렉토리가 존재하지 않으면 설정 폴더를 우선 생성
+        await fs.promises.mkdir(dir, { recursive: true });
+      } catch (e: any) {
+        console.error("설정 디렉토리 생성 중 오류 발생:", e);
       }
 
-      // 설정 파일이 없다면 생성한다.
-      if (!fs.existsSync(safe_file_location)) {
+      // 설정 폴더 안에 설정 파일이 없다면 생성한다.
+      try {
+        // 파일이 이미 존재하는지 확인
+        // 이 access 함수는 파일이 존재하지 않으면 ENOENT 예외를 발생시키고, 이미 있다면 아무 일을 하지 않는다.
+        await fs.promises.access(safe_file_location, fs.constants.F_OK);
+      } catch (_) {
+        // 존재하지 않을 경우 생성
         try {
-          await fs.promises.writeFile(
-            safe_file_location,
-            JSON.stringify(save_obj_data, null, 2)
-          );
-          console.log("초기 설정 파일이 존재하지 않아 생성했습니다.");
-        } catch (err) {
-          console.error(err);
+          const json_data = JSON.stringify(save_obj_data, null, 2);
+          await fs.promises.writeFile(safe_file_location, json_data, "utf-8");
+          console.log("초기 설정 파일이 존재하지 않아 새로 생성하였습니다.");
+        } catch (e: any) {
+          console.error("설정 파일 생성 중 오류 발생:", e);
         }
+      }
+    },
+
+    // IPC를 통한 글 DB 데이터 불러오기
+    async load_article_db() {
+      try {
+        const rows = await ipcRenderer.invoke("db-load-sessions");
+        // 세션별 그룹핑
+        const groups: Record<number, SaveArticleData> = {};
+        this.save_data.auto_save = [];
+        this.save_data.manual_save = [];
+        rows.forEach((r: any) => {
+          if (!groups[r.session_id]) {
+            groups[r.session_id] = {
+              user_input: {
+                search_type: r.search_type,
+                repeat_cnt: r.repeat_cnt,
+                gallery_id: r.gallery_id,
+                keyword: r.keyword,
+              },
+              article_data: [],
+            };
+            if (r.is_manual)
+              this.save_data.manual_save.push(groups[r.session_id]);
+            else this.save_data.auto_save.push(groups[r.session_id]);
+          }
+          groups[r.session_id].article_data.push({
+            번호: r.번호,
+            제목: r.제목,
+            댓글수: r.댓글수,
+            작성자: r.작성자,
+            조회수: r.조회수,
+            추천: r.추천,
+            작성일: r.작성일,
+          });
+        });
+      } catch (e) {
+        console.error("[load_sessions] IPC 오류", e);
       }
     },
 
     /*
       해당 함수는 수동 저장 버튼을 누를 때마다 호출된다.
       참고로 버튼을 연타하니깐 race condition 인지 몰라도
-      Json.Parse 부분에서 오류가 발생해서 버튼을 연타하지 못하도록 변경했다. 
+      Json.Parse 부분에서 오류가 발생해서 버튼을 연타하지 못하도록 변경했다.
       (수동 저장이 다 이루어지기 전까진 버튼이 로딩 상태로 변함)
     */
     async save_manual_data() {
-      try {
-        this.save_button.is_loading = true; // 버튼을 로딩 상태로 변경
-        // 먼저 설정 파일을 불러온다
-        const data = await fs.promises.readFile(
-          this.setting_file_location,
-          "utf-8"
-        );
-        // data를 json으로 파싱한다
-        const parsed_data: SaveData = JSON.parse(data);
-
-        if (!parsed_data.manual_save) {
-          parsed_data.manual_save = [];
-        }
-
-        // 현재 검색한 내용을 기록한다.
-        parsed_data.manual_save.push({
-          user_input: {
-            search_type: this.select_box.selected_item,
-            repeat_cnt: this.repeat_cnt,
-            gallery_id: this.gallery_id,
-            keyword: this.keyword,
-          },
-          article_data: this.table_rows,
-        });
-
-        // 수동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
-        this.save_data.manual_save = parsed_data.manual_save;
-
-        // parsed_data 객체를 JSON 문자열로 변환
-        const json_data = JSON.stringify(parsed_data, null, 2);
-
-        try {
-          // JSON 데이터를 파일에 씁니다.
-          await fs.promises.writeFile(this.setting_file_location, json_data);
-          console.log(
-            "[수동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
-          );
-        } catch (error) {
-          console.error(
-            "[수동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
-            error
-          );
-        }
-      } catch (error: any) {
-        console.log(error);
-      } finally {
-        this.save_button.is_loading = false; // 버튼을 로딩 상태에서 해제
-
-        this.$toast("저장이 완료되었습니다", {
-          position: "bottom-center",
-          timeout: 718,
-          closeOnClick: true,
-          pauseOnFocusLoss: true,
-          pauseOnHover: false,
-          draggable: true,
-          draggablePercent: 0.6,
-          showCloseButtonOnHover: true,
-          hideProgressBar: true,
-          closeButton: "button",
-          icon: true,
-          rtl: false,
-        } as any);
-      }
+      //   try {
+      //     this.save_button.is_loading = true; // 버튼을 로딩 상태로 변경
+      //     // 먼저 설정 파일을 불러온다
+      //     const data = await fs.promises.readFile(
+      //       this.setting_file_location,
+      //       "utf-8"
+      //     );
+      //     // data를 json으로 파싱한다
+      //     const parsed_data: SaveData = JSON.parse(data);
+      //     if (!parsed_data.manual_save) {
+      //       parsed_data.manual_save = [];
+      //     }
+      //     // 현재 검색한 내용을 기록한다.
+      //     parsed_data.manual_save.push({
+      //       user_input: {
+      //         search_type: this.select_box.selected_item,
+      //         repeat_cnt: this.repeat_cnt,
+      //         gallery_id: this.gallery_id,
+      //         keyword: this.keyword,
+      //       },
+      //       article_data: this.table_rows,
+      //     });
+      //     // 수동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
+      //     this.save_data.manual_save = parsed_data.manual_save;
+      //     // parsed_data 객체를 JSON 문자열로 변환
+      //     const json_data = JSON.stringify(parsed_data, null, 2);
+      //     try {
+      //       // JSON 데이터를 파일에 씁니다.
+      //       await fs.promises.writeFile(this.setting_file_location, json_data);
+      //       console.log(
+      //         "[수동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
+      //       );
+      //     } catch (error) {
+      //       console.error(
+      //         "[수동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
+      //         error
+      //       );
+      //     }
+      //   } catch (error: any) {
+      //     console.log(error);
+      //   } finally {
+      //     this.save_button.is_loading = false; // 버튼을 로딩 상태에서 해제
+      //     this.$toast("저장이 완료되었습니다", {
+      //       position: "bottom-center",
+      //       timeout: 718,
+      //       closeOnClick: true,
+      //       pauseOnFocusLoss: true,
+      //       pauseOnHover: false,
+      //       draggable: true,
+      //       draggablePercent: 0.6,
+      //       showCloseButtonOnHover: true,
+      //       hideProgressBar: true,
+      //       closeButton: "button",
+      //       icon: true,
+      //       rtl: false,
+      //     } as any);
+      //   }
     },
 
-    async save_data_on_disk() {
+    async save_ui_data() {
       // 종료 직전에 프로그램의 입력 데이터를 저장한다.
-      // 현재 dc_data.json 에 저장된 데이터를 불러온다.
-      let auto_article_data: SaveArticleData[] = [];
-      const current_data = await fs.promises.readFile(
-        this.setting_file_location,
-        "utf-8"
-      );
-
-      const parsed_data: SaveData = JSON.parse(current_data);
-      if (parsed_data.auto_save && parsed_data.auto_save.length !== 0) {
-        auto_article_data = parsed_data.auto_save;
-      }
-
-      let manual_article_data: SaveArticleData[] = [];
-      if (parsed_data.manual_save && parsed_data.manual_save.length !== 0) {
-        manual_article_data = parsed_data.manual_save;
-      }
-
       const data: SaveData = {
         search_type: this.select_box.selected_item,
         repeat_cnt: this.repeat_cnt,
@@ -600,8 +605,6 @@ export default Vue.extend({
             max_auto_save: this.settings.auto_save.max_auto_save,
           },
         } as Settings,
-        auto_save: auto_article_data,
-        manual_save: manual_article_data,
       };
 
       try {
@@ -610,7 +613,7 @@ export default Vue.extend({
           // 들여쓰기까지 포함해 깔끔하게 저장
           JSON.stringify(data, null, 2)
         );
-        console.log(data, "Data saved successfully");
+        console.log(data, "UI 데이터 저장이 완료되었습니다.");
       } catch (err) {
         console.error(err);
       }
@@ -694,6 +697,7 @@ export default Vue.extend({
         },
       } as DCWebRequest);
 
+      // 디버깅용 출력
       console.log({
         id: this.gallery_id,
         repeat_cnt: this.repeat_cnt,
@@ -701,10 +705,20 @@ export default Vue.extend({
         search_type: this.string_to_query(this.select_box.selected_item),
       });
 
+      /*
+        주의 : 아래 IPC 응답을 받기 위해 리스너 함수를 ipcRenderer.on() 이 아닌 반드시 .once() 로 등록해야 한다
+          .on() 으로 등록 시 계속해서 IPC 요청에 대한 응답 함수를 '누적' 해서 더하는 형태로 작동하기에 응답 한 번 처리 후 자동 해제되는 once() 를 사용해야 한다.
+        지금까지 .on() 의 동작을 잘못 이해해서 검색이 매번 이루어질때마다 응답 함수가 반복 호출되고 있는 끔찍한 일이 일어나고 있었던 것... ㅜㅜㅜ
+      */
       // 백그라운드 서버로부터 응답 받기
-      ipcRenderer.on(IPCChannel.WEB_RESPONSE, this.web_response_callback);
+      ipcRenderer.once(IPCChannel.WEB_RESPONSE, this.web_response_callback);
 
-      // 백그라운드 서버로부터 진행 상황 받기 (실제로는 콜백함수가 2번 실행되어 전달됨)
+      /*
+        백그라운드 서버로부터 진행 상황 받기
+        이 경우엔 전달 값이 계속해서 연속적으로 들어오므로, on() 으로 계속해서 받는 Logic은 유지하되,
+        버튼을 누르면 on()이 계속 호출되어 누적되므로 누적을 제거하는 코드까지 포함해야 한다.
+      */
+      ipcRenderer.removeAllListeners(IPCChannel.WEB_REQUEST_PROGRESS);
       ipcRenderer.on(
         IPCChannel.WEB_REQUEST_PROGRESS,
         (event, progress: string, status: string) => {
@@ -716,88 +730,59 @@ export default Vue.extend({
 
     // 웹 응답 받아 처리하는 콜백 함수
     async web_response_callback(event: IpcRendererEvent, result: Article[][]) {
-      console.log(result.length);
-      const items: AGGridVueArticle[] = [];
+      const total_count = result.flat().length;
+      console.log(`검색 결과 : ${total_count}개`);
 
-      console.time("배열 삽입 시간 : ");
-      for (let article of result) {
-        if (article.length > 0) {
-          for (let item of article) {
-            items.push({
-              번호: item.gall_num,
-              제목: item.gall_tit,
-              댓글수: item.reply_num,
-              작성자: item.gall_writer,
-              조회수: item.gall_count,
-              추천: item.gall_recommend,
-              작성일: item.gall_date,
-            });
-          }
-        }
-      }
+      console.time("배열 준비 시간 : "); // ==============================
 
-      console.timeEnd("배열 삽입 시간 : ");
-      this.table_rows = items; //데이터 바인딩 (표 반영)
+      // 중첩 배열 평탄화 및 AGGridVueArticle 형태로 변환
+      const items: AGGridVueArticle[] = result.flat().map((item) => ({
+        번호: item.gall_num,
+        제목: item.gall_tit,
+        댓글수: item.reply_num,
+        작성자: item.gall_writer,
+        조회수: item.gall_count,
+        추천: item.gall_recommend,
+        작성일: item.gall_date,
+      }));
+
+      console.timeEnd("배열 준비 시간 : "); // ==============================
+
+      // 데이터 바인딩 (표에 데이터 반영)
+      this.table_rows = items;
 
       // 버튼 로딩 완료 반영
       this.search_btn.is_loading = false;
 
-      // vuex 데이터에 갤러리 id 반영
-      // 검색이 완료된 후 vuex에 반영해야 유저가 검색 성공 이후에 갤러리 id를 바꿔도
-      // 프로그램이 망가지지 않음 (링크 열기)
+      /*
+        vuex 데이터에 갤러리 id 반영
+        검색이 완료된 후 vuex에 반영해야 유저가 검색 성공 이후에 갤러리 id를 바꿔도
+        프로그램이 망가지지 않음 - 링크 열기
+      */
       this.vuex_gallery_id = this.gallery_id;
 
-      // 만약에 자동 저장이 켜져있으면 내용을 파일에 저장
-      if (this.settings.auto_save.auto_save_result) {
-        // 먼저 설정 파일을 불러온다
-        const data = (
-          await fs.promises.readFile(this.setting_file_location)
-        ).toString();
+      // 만약에 자동 저장이 켜져있으면서 저장할 내용이 있으면 DB에 글을 저장
+      if (this.settings.auto_save.auto_save_result && items.length > 0) {
+        const clean_articles = JSON.parse(JSON.stringify(items));
 
-        // data를 json으로 파싱한다
-        const parsed_data: SaveData = JSON.parse(data);
-
-        // auto_save 값이 없으면 빈 배열을 추가한다.
-        if (!parsed_data.auto_save) {
-          parsed_data.auto_save = [];
-        }
-
-        const limit = this.settings.auto_save.max_auto_save; // 자동 저장 갯수 제한
-
-        // 저장하려는 데이터 내용이 비었으면 자동 저장하지 않는다.
-        if (items.length === 0) return;
-
-        // 개수 제한에 걸린다면 자동 저장 하지 않는다
-        if (parsed_data.auto_save.length >= limit) return;
-
-        // 현재 검색한 내용을 auto_save에 기록한다.
-        parsed_data.auto_save.push({
-          user_input: {
+        // 저장할 데이터 형태
+        const payload = {
+          isManual: 0, // SQLite엔 Boolean 타입이 없기에 반드시 0 = false, 1 = true 로 바꿔서 제공할 것
+          meta: {
             search_type: this.select_box.selected_item,
             repeat_cnt: this.repeat_cnt,
             gallery_id: this.gallery_id,
             keyword: this.keyword,
           },
-          article_data: items,
-        });
+          articles: clean_articles,
+        };
 
-        // 자동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
-        this.save_data.auto_save = parsed_data.auto_save;
+        const res = await ipcRenderer.invoke("db-save-search-log", payload);
 
-        // parsed_data 객체를 JSON 문자열로 변환
-        const json_data = JSON.stringify(parsed_data, null, 2);
-
-        try {
-          // JSON 데이터를 파일에 씁니다.
-          await fs.promises.writeFile(this.setting_file_location, json_data);
-          console.log(
-            "[자동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
-          );
-        } catch (error) {
-          console.error(
-            "[자동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
-            error
-          );
+        if (res.success) {
+          console.log("[자동 저장] DB에 글 저장 완료");
+        } else {
+          console.error("[자동 저장] DB에 글 저장 실패:", res.error);
         }
       }
     },
@@ -806,16 +791,16 @@ export default Vue.extend({
   computed: {
     /*
       base_folder_location 변수를 참조해 사용하려면
-      data() 안에서 바로 사용하면 안된다. 
+      data() 안에서 바로 사용하면 안된다.
       data 안에 있는 값을 서로 사용하려면 data 객체가 완전히 초기화 되고 나서 사용해야 한다.
       computed 안에서 사용시 data 항목이 모두 초기화된 후에 계산된 값을 얻을 수 있기에 문제 해결이 가능하다.
 
       또한 return type string 을 명시적으로 지정해줘야 오류가 안난다.
 
-      TypeScript는 Vue의 computed 속성 안에서 this의 타입을 자동으로 추론하지 못할 때가 있습니다. 
+      TypeScript는 Vue의 computed 속성 안에서 this의 타입을 자동으로 추론하지 못할 때가 있습니다.
       특히, Vue의 data 함수 안에서 정의된 속성들을 참조할 때 이런 문제가 발생할 수 있습니다.
-      TypeScript는 this가 무엇을 가리키는지 정확히 알 수 있어야 하는데, 
-      Vue의 컴포넌트 내부에서는 this가 굉장히 유연하게 사용되기 때문에 TypeScript가 정확히 추론하기 어려울 때가 있습니다. 
+      TypeScript는 this가 무엇을 가리키는지 정확히 알 수 있어야 하는데,
+      Vue의 컴포넌트 내부에서는 this가 굉장히 유연하게 사용되기 때문에 TypeScript가 정확히 추론하기 어려울 때가 있습니다.
       이런 경우에는 개발자가 명시적으로 타입을 지정해 주어야 합니다.
 
       by GPT4o : 정확한 내용은 검증이 필요.
