@@ -664,8 +664,7 @@ export default Vue.extend({
     },
     minimize_window() {
       // 현재 창 최소화
-      // const window = remote.getCurrentWindow();
-      // window.minimize();
+      ipcRenderer.send(IPCChannel.MINIMIZE_ME);
     },
     close_window() {
       // 확실한 종료 보장을 위해 일렉트론 백그라운드 서버와 IPC 통신으로 종료 요청

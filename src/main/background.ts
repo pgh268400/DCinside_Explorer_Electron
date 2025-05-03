@@ -77,14 +77,17 @@ async function createWindow() {
     win.loadURL("app://./index.html");
   }
 
+  // win 변수가 필요한 IPC 등록 =========================
   // 종료 요청 처리
-  ipcMain.on(IPCChannel.CLOSE_ME, (event, arg) => {
-    // 크롬 개발자 도구가 열려있으면 닫고 종료해줘야 함. 아니면 종료가 안됨.
-    if (win.webContents.isDevToolsOpened()) {
-      win.webContents.closeDevTools();
-    }
+  ipcMain.on(IPCChannel.CLOSE_ME, () => {
     app.quit();
   });
+
+  // 창 최소화 요청 처리
+  ipcMain.on(IPCChannel.MINIMIZE_ME, () => {
+    win.minimize();
+  });
+  // ===================================================
 
   // 창 포커싱 됐을때 이벤트
   // win.on("focus", () => {

@@ -19,6 +19,7 @@ enum IPCChannel {
   WEB_REQUEST_PROGRESS = "web-request-progress",
   CLOSE_ME = "close-me",
   OPEN_LINK = "open-link",
+  MINIMIZE_ME = "minimize-me",
   SET_REQUEST_LIMIT = "set-request-limit",
   GET_GALLERY_TEXT_NAME_REQ = "get-gallery-text-name-req",
   GET_GALLERY_TEXT_NAME_RES = "get-gallery-text-name-res",
