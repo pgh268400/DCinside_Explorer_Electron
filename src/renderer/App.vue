@@ -777,7 +777,9 @@ export default Vue.extend({
           articles: clean_articles,
         };
 
+        console.time("DB 저장에 걸린 시간 : ");
         const res = await ipcRenderer.invoke("db-save-search-log", payload);
+        console.timeEnd("DB 저장에 걸린 시간 : ");
 
         if (res.success) {
           console.log("[자동 저장] DB에 글 저장 완료");
