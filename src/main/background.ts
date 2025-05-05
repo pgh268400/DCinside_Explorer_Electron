@@ -1,5 +1,4 @@
 // 일렉트론 백그라운드 프로세스 (핵심 메인 프로세스)
-
 "use strict";
 
 import {
@@ -16,10 +15,11 @@ import { DCAsyncParser } from "./modules/dcparser";
 import { DCWebRequest, IPCChannel } from "@/types/ipc";
 import path from "path";
 import {
-  delete_search_log,
+  get_all_logs,
+  get_full_logs,
   load_search_logs,
   save_search_log,
-} from "./modules/sqlite3";
+} from "./modules/database";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -58,8 +58,9 @@ async function createWindow() {
       sandbox: false,
 
       /*
-        안전을 위해선 보안 권고 사항이 nodeIntegration 비활성화, contextIsolation 활성화이나
-        현재 Electron 구버전으로 작업된 코드를 마이그레이션 하는 과정에서 문제가 많아서 그냥 true / false로 임시 조치하였다.
+        안전을 위해선 보안 권고 사항이 nodeIntegration : false, contextIsolation : true 이나
+        그렇게 설정하면 현재 Electron 구버전으로 작업된 코드를 새로운 Electron 버전으로 마이그레이션 하는 과정에
+        문제가 많이 발생해 그냥 true / false로 임시 조치하였다.
       */
       nodeIntegration: true,
       contextIsolation: false,
@@ -84,12 +85,12 @@ async function createWindow() {
 
   // win 변수가 필요한 IPC 등록 =========================
   // 종료 요청 처리
-  ipcMain.on(IPCChannel.CLOSE_ME, () => {
+  ipcMain.on(IPCChannel.Window.CLOSE_ME, () => {
     app.quit();
   });
 
   // 창 최소화 요청 처리
-  ipcMain.on(IPCChannel.MINIMIZE_ME, () => {
+  ipcMain.on(IPCChannel.Window.MINIMIZE_ME, () => {
     win.minimize();
   });
   // ===================================================
@@ -153,34 +154,34 @@ app.on("ready", async () => {
   let parser: DCAsyncParser;
 
   // 웹 요청 처리 (검색)
-  ipcMain.on(IPCChannel.WEB_REQUEST, async (event, arg: DCWebRequest) => {
+  ipcMain.on(IPCChannel.Web.REQUEST, async (event, arg: DCWebRequest) => {
     const { id, repeat_cnt, keyword, search_type, option } = arg;
     try {
       // const parser = await DCAsyncParser.create(id);
       // 검색 버튼을 누를때마다 객체를 새로 생성하여 검색한다.
-      // 객체 생성 & 초기화 시점 = 검색 버튼을 누를때
+      // 객체 생성 & 초기화 시점 : 검색 버튼을 누를때
       parser = await DCAsyncParser.create(id, option);
       const result = await parser.search(
         search_type,
         keyword,
         repeat_cnt,
         (progress: string, status: string) => {
-          event.sender.send(IPCChannel.WEB_REQUEST_PROGRESS, progress, status);
+          event.sender.send(IPCChannel.Web.REQUEST_PROGRESS, progress, status);
         }
       );
 
       // await fs.promises.writeFile("result.json", JSON.stringify(result));
-      event.sender.send(IPCChannel.WEB_RESPONSE, result);
+      event.sender.send(IPCChannel.Web.RESPONSE, result);
     } catch (e: any) {
       console.error(e);
-      event.sender.send(IPCChannel.WEB_RESPONSE, []);
+      event.sender.send(IPCChannel.Web.RESPONSE, []);
     }
   });
 
   // 갤러리 ID 클릭 시 해당 갤러리 페이지 여는 IPC
   ipcMain.on(
-    IPCChannel.OPEN_LINK,
-    async (event, gallery_id: string, no: string) => {
+    IPCChannel.Link.OPEN_LINK,
+    async (_event, gallery_id: string, no: string) => {
       if (parser) {
         const g_type = parser.get_garllery_type();
         const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallery_id}&no=${no}`;
@@ -196,28 +197,31 @@ app.on("ready", async () => {
     }
   );
 
-  // 갤러리 텍스트 명 처리
-  //  { "lies_of_p" : null } 이런식으로 렌더러에서 데이터를 보내 IPC 요청하면
-  // { "lies_of_p" : "P의 거짓 마이너 갤러리" } 이런식으로 메인 프로세스에서 응답해야 한다.
+  /*
+    갤러리 텍스트명 조회 IPC 처리
+    ex)
+    -  렌더러 요청: { "lies_of_p": null }
+    -  메인 프로세스 응답: { "lies_of_p": "P의 거짓 마이너 갤러리" }
+  */
   ipcMain.on(
-    IPCChannel.GET_GALLERY_TEXT_NAME_REQ,
+    IPCChannel.Gallery.GET_TEXT_NAME_REQ,
     async (event, id_dict: any) => {
       for (const [id, val] of Object.entries(id_dict)) {
         parser = await DCAsyncParser.create(id);
         id_dict[id] = await parser.get_gallery_text_name();
       }
       console.log("데이터 준비 완료", id_dict);
-      event.sender.send(IPCChannel.GET_GALLERY_TEXT_NAME_RES, id_dict);
+      event.sender.send(IPCChannel.Gallery.GET_TEXT_NAME_RES, id_dict);
     }
   );
 });
 
 // IPC 핸들러 등록
 ipcMain.handle(
-  "db-save-search-log",
-  async (_event, { isManual, meta, articles }) => {
+  IPCChannel.DB.SAVE_ARTICLE_SEARCH_LOG,
+  async (_event, { mode, user_input, article_data }) => {
     try {
-      save_search_log(isManual, meta, articles);
+      await save_search_log(article_data.items, user_input, mode);
       return { success: true };
     } catch (err: any) {
       console.error("[db-save-search-log] 오류 발생:", err);
@@ -226,20 +230,35 @@ ipcMain.handle(
   }
 );
 
-ipcMain.handle("db-load-search-logs", async () => {
-  const logs = load_search_logs();
-  return logs;
-});
+ipcMain.handle(
+  IPCChannel.DB.LOAD_ARTICLE_SEARCH_LOG,
+  async (_event, load_mode) => {
+    if (load_mode === "all") {
+      // ── auto / manual 각각 원본 배열 조회 ────────────────────
+      const auto_logs = await get_full_logs("auto");
+      const manual_logs = await get_full_logs("manual");
 
-ipcMain.handle("db-delete-search-log", async (_evt, sessionId: number) => {
-  try {
-    delete_search_log(sessionId);
-    return { success: true };
-  } catch (err: any) {
-    console.error("[db-delete-search-log] 오류 발생:", err);
-    return { success: false, error: err.message };
+      // 원하는 형태로 객체 묶어서 반환
+      return {
+        auto_save: auto_logs, // 자동 저장 로그 배열
+        manual_save: manual_logs, // 수동 저장 로그 배열
+      };
+    }
+
+    // 단일 모드(flatten) 조회는 그대로 유지
+    return await load_search_logs(load_mode);
   }
-});
+);
+
+// ipcMain.handle("db-delete-search-log", async (_evt, sessionId: number) => {
+//   try {
+//     delete_search_log(sessionId);
+//     return { success: true };
+//   } catch (err: any) {
+//     console.error("[db-delete-search-log] 오류 발생:", err);
+//     return { success: false, error: err.message };
+//   }
+// });
 
 // Exit cleanly on request from parent process in development mode.
 if (isDevelopment) {

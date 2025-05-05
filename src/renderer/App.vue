@@ -355,7 +355,7 @@ export default Vue.extend({
   // 처음 실행시 실행되는 함수
   async mounted() {
     this.initialize_ui(); // UI 설정 저장 파일 없으면 생성 & 있으면 로드
-    // await this.load_article_db(); // SQLite 글 데이터 로드
+    await this.load_article_db(); // SQLite 글 데이터 로드
   },
 
   // 종료 직전에 실행되는 함수
@@ -412,7 +412,7 @@ export default Vue.extend({
       }
     },
 
-    async delete_article(obj: any) {
+    async delete_article(_obj: any) {
       // console.log(obj);
       // // 삭제 버튼을 연타하면 오류가 발생하므로 연타를 못하게 바로 데이터 상에서 날려버린다.
       // if (obj.type === "manual") {
@@ -484,36 +484,15 @@ export default Vue.extend({
     // IPC를 통한 글 DB 데이터 불러오기
     async load_article_db() {
       try {
-        const rows = await ipcRenderer.invoke("db-load-sessions");
-        // 세션별 그룹핑
-        const groups: Record<number, SaveArticleData> = {};
-        this.save_data.auto_save = [];
-        this.save_data.manual_save = [];
-        rows.forEach((r: any) => {
-          if (!groups[r.session_id]) {
-            groups[r.session_id] = {
-              user_input: {
-                search_type: r.search_type,
-                repeat_cnt: r.repeat_cnt,
-                gallery_id: r.gallery_id,
-                keyword: r.keyword,
-              },
-              article_data: [],
-            };
-            if (r.is_manual)
-              this.save_data.manual_save.push(groups[r.session_id]);
-            else this.save_data.auto_save.push(groups[r.session_id]);
-          }
-          groups[r.session_id].article_data.push({
-            번호: r.번호,
-            제목: r.제목,
-            댓글수: r.댓글수,
-            작성자: r.작성자,
-            조회수: r.조회수,
-            추천: r.추천,
-            작성일: r.작성일,
-          });
-        });
+        const article_data = await ipcRenderer.invoke(
+          IPCChannel.DB.LOAD_ARTICLE_SEARCH_LOG,
+          "all"
+        );
+
+        this.save_data.manual_save = article_data.manual_save;
+        this.save_data.auto_save = article_data.auto_save;
+
+        console.log(article_data);
       } catch (e) {
         console.error("[load_sessions] IPC 오류", e);
       }
@@ -665,13 +644,14 @@ export default Vue.extend({
       };
       return query_match_ui[selected_items];
     },
+
     minimize_window() {
       // 현재 창 최소화
-      ipcRenderer.send(IPCChannel.MINIMIZE_ME);
+      ipcRenderer.send(IPCChannel.Window.MINIMIZE_ME);
     },
     close_window() {
       // 확실한 종료 보장을 위해 일렉트론 백그라운드 서버와 IPC 통신으로 종료 요청
-      ipcRenderer.send(IPCChannel.CLOSE_ME);
+      ipcRenderer.send(IPCChannel.Window.CLOSE_ME);
     },
 
     // 검색 버튼 누를 시 실행되는 함수
@@ -687,7 +667,7 @@ export default Vue.extend({
       this.search_btn.is_loading = true;
 
       // 웹 요청 보내기
-      ipcRenderer.send(IPCChannel.WEB_REQUEST, {
+      ipcRenderer.send(IPCChannel.Web.REQUEST, {
         id: this.gallery_id,
         repeat_cnt: this.repeat_cnt,
         keyword: this.keyword,
@@ -711,17 +691,17 @@ export default Vue.extend({
         지금까지 .on() 의 동작을 잘못 이해해서 검색이 매번 이루어질때마다 응답 함수가 반복 호출되고 있는 끔찍한 일이 일어나고 있었던 것... ㅜㅜㅜ
       */
       // 백그라운드 서버로부터 응답 받기
-      ipcRenderer.once(IPCChannel.WEB_RESPONSE, this.web_response_callback);
+      ipcRenderer.once(IPCChannel.Web.RESPONSE, this.web_response_callback);
 
       /*
         백그라운드 서버로부터 진행 상황 받기
         이 경우엔 전달 값이 계속해서 연속적으로 들어오므로, on() 으로 계속해서 받는 Logic은 유지하되,
         버튼을 누르면 on()이 계속 호출되어 누적되므로 누적을 제거하는 코드까지 포함해야 한다.
       */
-      ipcRenderer.removeAllListeners(IPCChannel.WEB_REQUEST_PROGRESS);
+      ipcRenderer.removeAllListeners(IPCChannel.Web.REQUEST_PROGRESS);
       ipcRenderer.on(
-        IPCChannel.WEB_REQUEST_PROGRESS,
-        (event, progress: string, status: string) => {
+        IPCChannel.Web.REQUEST_PROGRESS,
+        (_event, progress: string, status: string) => {
           this.progress_value = progress;
           this.loading_text_data = status;
         }
@@ -729,7 +709,7 @@ export default Vue.extend({
     },
 
     // 웹 응답 받아 처리하는 콜백 함수
-    async web_response_callback(event: IpcRendererEvent, result: Article[][]) {
+    async web_response_callback(_event: IpcRendererEvent, result: Article[][]) {
       const total_count = result.flat().length;
       console.log(`검색 결과 : ${total_count}개`);
 
@@ -763,22 +743,28 @@ export default Vue.extend({
 
       // 만약에 자동 저장이 켜져있으면서 저장할 내용이 있으면 DB에 글을 저장
       if (this.settings.auto_save.auto_save_result && items.length > 0) {
-        const clean_articles = JSON.parse(JSON.stringify(items));
+        // 저장할 때 갤러리 id에 대응되는 갤러리 명도 저장, IPC 요청이 필요
 
-        // 저장할 데이터 형태
-        const payload = {
-          isManual: 0, // SQLite엔 Boolean 타입이 없기에 반드시 0 = false, 1 = true 로 바꿔서 제공할 것
-          meta: {
+        // IPC로 저장 요청할 데이터 형식
+        const data = {
+          mode: "auto",
+          user_input: {
             search_type: this.select_box.selected_item,
             repeat_cnt: this.repeat_cnt,
             gallery_id: this.gallery_id,
             keyword: this.keyword,
           },
-          articles: clean_articles,
+          article_data: {
+            items,
+          },
         };
+        console.log(data);
 
         console.time("DB 저장에 걸린 시간 : ");
-        const res = await ipcRenderer.invoke("db-save-search-log", payload);
+        const res = await ipcRenderer.invoke(
+          IPCChannel.DB.SAVE_ARTICLE_SEARCH_LOG,
+          data
+        );
         console.timeEnd("DB 저장에 걸린 시간 : ");
 
         if (res.success) {
