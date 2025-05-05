@@ -185,54 +185,38 @@ export default defineComponent({
   // watch
   watch: {
     // 다이얼로그가 닫힐 때 갤러리 아이디를 원래대로 돌려놓는다.
-    is_open_save_data: function (new_val, old_val) {
+    is_open_save_data: function (new_val, _old_val) {
       if (new_val === false) {
         this.gallery_id = this.origin_gallery_id;
       }
     },
     // 갤러리 id를 받아서 메인 프로세스에 요청을 보내서 갤러리 이름을 가져오기 위해 Watch를 활용한다.
-    save_data: function (
+    save_data: async function (
       new_val: SaveArticleData[],
-      old_val: SaveArticleData[]
+      _old_val: SaveArticleData[]
     ) {
-      const id_dict: any = {};
+      const id_obj: any = {};
 
-      // for of로 순회
       for (const element of new_val) {
-        console.log(element.user_input.gallery_id);
-        id_dict[element.user_input.gallery_id] = null;
+        id_obj[element.user_input.gallery_id] = null;
       }
 
-      console.log("REQUEST_DATA", id_dict);
-
-      // id_dict
-      // { "lies_of_p" : null } 이런식으로 렌더러에서 데이터를 보내 IPC 요청하면
-      // { "lies_of_p" : "P의 거짓 마이너 갤러리" } 이런식으로 메인 프로세스에서 응답이 온다.
-
-      // 메인 프로세스에 요청을 보내서 갤러리 이름을 가져온다.
-      ipcRenderer.send(IPCChannel.GET_GALLERY_TEXT_NAME_REQ, id_dict);
-
-      // 데이터를 수신받는다.
-      // watch 역시 데이터 변경에 따라 반복해서 등작하기에 이벤트 리스너를 .on() 으로 등록시키면
-      // 함수가 누적 실행되기에 절대 사용하면 안돼고 .once() 를 써야 한다
-      ipcRenderer.once(
-        IPCChannel.GET_GALLERY_TEXT_NAME_RES,
-        (event, id_dict) => {
-          console.log("Get Gallery Text Name Response", id_dict);
-          // 들어온 데이터에 맞게 갤러리 이름을 바꿔준다.
-          // 변수에 바로 반영하면 데이터 바인딩에 의해 table의 입력값이 영향을 받는다.
-          // 보여주기 전용의 key를 하나 더 save_data에 넣어줘야 한다.
-
-          for (const element of this.save_data) {
-            if (element.user_input.gallery_id in id_dict) {
-              element.user_input.gallery_name =
-                id_dict[element.user_input.gallery_id];
-              // element.user_input.gallery_id =
-              //   id_dict[element.user_input.gallery_id];
-            }
-          }
-        }
+      const result: Record<string, string> = await ipcRenderer.invoke(
+        IPCChannel.Gallery.GET_TEXT_NAME,
+        id_obj
       );
+
+      // result를 사용하여 갤러리 이름 업데이트
+      for (const element of this.save_data) {
+        if (element.user_input.gallery_id in result) {
+          // Vue의 반응성을 위해 Vue.set 사용
+          this.$set(
+            element.user_input,
+            "gallery_name",
+            result[element.user_input.gallery_id]
+          );
+        }
+      }
     },
   },
 });

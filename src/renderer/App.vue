@@ -264,13 +264,19 @@ export default Vue.extend({
     return {
       title: "DCInside Explorer", // 프로그램 창 타이틀에 사용하는 변수
       theme_color: "#3B4890", // 프로그램 테마 색상
-
       base_folder_location: "./dc_config", // 프로그램 설정 파일이 저장될 폴더 이름
+
+      // 창 상단 ===============================================
       select_box: {
+        // 검색 옵션
         items: ["제목+내용", "제목", "내용", "글쓴이", "댓글"],
         selected_item: "",
       },
-      gallery_id: "",
+      repeat_cnt: 0, // 반복 횟수
+      gallery_id: "", // 갤러리 ID
+      keyword: "", // 검색어
+      // =======================================================
+
       auto_save_data: [] as SaveArticleData[],
       drawer_items: [
         {
@@ -305,21 +311,15 @@ export default Vue.extend({
         manual_save: [] as SaveArticleData[],
       },
 
+      // 표에 뿌릴 데이터
       table_rows: [] as AGGridVueArticle[],
 
       // 검색 버튼의 로딩 상태를 나타내는 변수
-      search_btn: {
-        is_loading: false,
-      },
+      search_btn: { is_loading: false },
 
       // 수동 저장 버튼의 로딩 상태를 나타내는 변수
-      save_button: {
-        is_loading: false,
-      },
-      data_table_loading: false,
-      repeat_cnt: 0,
+      save_button: { is_loading: false },
 
-      keyword: "",
       progress_value: "",
       loading_text_data: "",
 
@@ -331,7 +331,6 @@ export default Vue.extend({
       is_open_save_data: false, // 불러오기 안의 자동 저장 목록 다이얼로그
       // =========================================================================
 
-      filter_text: "",
       settings: {
         program_entire_settings: {
           max_parallel: 100,

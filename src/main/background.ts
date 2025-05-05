@@ -203,15 +203,18 @@ app.on("ready", async () => {
     -  렌더러 요청: { "lies_of_p": null }
     -  메인 프로세스 응답: { "lies_of_p": "P의 거짓 마이너 갤러리" }
   */
-  ipcMain.on(
-    IPCChannel.Gallery.GET_TEXT_NAME_REQ,
-    async (event, id_dict: any) => {
-      for (const [id, val] of Object.entries(id_dict)) {
-        parser = await DCAsyncParser.create(id);
-        id_dict[id] = await parser.get_gallery_text_name();
+  ipcMain.handle(
+    IPCChannel.Gallery.GET_TEXT_NAME, // 채널 등록
+    async (_event, id_dict: Record<string, null>) => {
+      // 요청 타입
+      const result: Record<string, string> = {};
+      for (const id of Object.keys(id_dict)) {
+        const parser = await DCAsyncParser.create(id); // 파서 생성
+        result[id] = await parser.get_gallery_text_name(); // 텍스트명 조회
       }
-      console.log("데이터 준비 완료", id_dict);
-      event.sender.send(IPCChannel.Gallery.GET_TEXT_NAME_RES, id_dict);
+      console.log("[Main] 데이터 준비 완료 : ", id_dict);
+
+      return result; // 응답 반환
     }
   );
 });

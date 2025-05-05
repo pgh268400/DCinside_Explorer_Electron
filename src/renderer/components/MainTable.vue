@@ -99,7 +99,7 @@ import { ColumnApi, GridApi, GridReadyEvent } from "ag-grid-community";
 import { defineComponent } from "vue";
 import { AgGridVue } from "ag-grid-vue";
 import CustomLinkRenderer from "./CustomLinkRenderer.vue";
-import SpoilerRenderer from "./SpoilerRenderer.vue";
+import SpoilerRenderer from "./CustomTitleRenderer.vue";
 
 // 컴포넌트 만들 시 defineComponent() 로 반드시 묶어줘야 한다.
 export default defineComponent({

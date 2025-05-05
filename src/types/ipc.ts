@@ -12,8 +12,7 @@ export const IPCChannel = {
   },
   // 갤러리 id로 갤러리 이름 가져오는 웹 통신
   Gallery: {
-    GET_TEXT_NAME_REQ: "get-gallery-text-name-req",
-    GET_TEXT_NAME_RES: "get-gallery-text-name-res",
+    GET_TEXT_NAME: "get-gallery-text-name",
   },
   // 일렉트론 메인 창 닫기 / 최소화 버튼
   Window: {
