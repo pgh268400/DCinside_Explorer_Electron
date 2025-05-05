@@ -68,133 +68,10 @@
       </v-container>
     </v-main>
     <!-- 설정 다이얼 로그 -->
-    <v-dialog v-model="is_open_settings" width="500px">
-      <v-card>
-        <v-toolbar density="compact" :color="theme_color" dense>
-          <v-toolbar-title>
-            <span style="color: white">Settings</span>
-          </v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-btn icon @click="is_open_settings = false" class="no-drag">
-            <v-icon color="white">mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <div class="pa-2">
-          <v-subheader>프로그램 전체 동작 설정</v-subheader>
-          <v-list-item>
-            <v-list-item-content class="pb-0">
-              <v-text-field
-                label="최대 병렬 처리 횟수"
-                outlined
-                clearable
-                v-model.number="settings.program_entire_settings.max_parallel"
-                height="auto"
-                type="number"
-                hide-spin-buttons></v-text-field>
-            </v-list-item-content>
-            <v-tooltip right :max-width="404">
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn
-                  fab
-                  small
-                  color="primary"
-                  class="ma-2 mb-7"
-                  elevation="0"
-                  v-bind="attrs"
-                  v-on="on">
-                  <v-icon dark>mdi-help-circle</v-icon>
-                </v-btn>
-              </template>
-              <span>
-                최대 병렬 처리 횟수를 조정하면 10000개씩 검색하는 디시 검색
-                속도를 늘릴 수 있습니다. 예를 들어서 30으로 설정한 경우
-                10000개의 글을 동시에 30개 단위로 검색합니다.
-                <br />
-                즉, 300000개의 글을 한꺼번에 조회하게 되며 이 값을 늘리면 탐색
-                속도는 빨라지지만 그만큼 디시에서 일시적 IP차단을 당할 확률이
-                높아집니다.
-                <u>100 이상 올리는 것은 권장하지 않습니다.</u>
-                <br />
-                <b>
-                  기본값 : {{ settings.program_entire_settings.max_parallel }}
-                </b>
-              </span>
-            </v-tooltip>
-          </v-list-item>
-          <v-divider></v-divider>
-          <v-subheader>유저 설정</v-subheader>
-          <v-list-item>
-            <v-list-item-action>
-              <v-checkbox
-                v-model="
-                  settings.user_preferences.clear_data_on_search
-                "></v-checkbox>
-            </v-list-item-action>
-            <v-list-item-content>
-              <v-list-item-title>
-                검색 시 기존 검색 결과 초기화
-              </v-list-item-title>
-              <v-list-item-subtitle>
-                검색하면 기존에 검색한 결과를 지우고 새로 검색합니다
-              </v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
-          <v-divider></v-divider>
-          <v-subheader>자동 저장</v-subheader>
-          <v-list-item>
-            <v-list-item-action>
-              <v-checkbox
-                v-model="settings.auto_save.auto_save_result"></v-checkbox>
-            </v-list-item-action>
-            <v-list-item-content>
-              <v-list-item-title>자동 저장 활성화</v-list-item-title>
-              <v-list-item-subtitle>
-                최근 검색 기록을 자동 저장합니다
-              </v-list-item-subtitle>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item>
-            <v-list-item-content class="pb-0">
-              <v-text-field
-                label="최대 자동 저장 횟수"
-                outlined
-                clearable
-                v-model.number="settings.auto_save.max_auto_save"
-                height="auto"
-                type="number"
-                hide-spin-buttons
-                :disabled="!settings.auto_save.auto_save_result"></v-text-field>
-            </v-list-item-content>
-            <v-tooltip right :max-width="404">
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn
-                  fab
-                  small
-                  color="primary"
-                  class="ma-2 mb-7"
-                  elevation="0"
-                  v-bind="attrs"
-                  v-on="on">
-                  <v-icon dark>mdi-help-circle</v-icon>
-                </v-btn>
-              </template>
-              <span>
-                자동 저장 시 최대 저장 횟수를 조정합니다. 예를 들어서 10으로
-                설정한 경우 검색할때마다 최근 10번의 검색 기록을 저장합니다.
-                아주 큰 값을 입력하면 무한정 저장하게 할 수 있으나 용량도 무한히
-                늘어날 수 있으니 주의해야 합니다.
-                <br />
-                <b>기본값 : {{ settings.auto_save.max_auto_save }}</b>
-              </span>
-            </v-tooltip>
-          </v-list-item>
-        </div>
-        <v-card-actions class="justify-center">
-          <v-btn variant="text" @click="submit_settings">확인</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <settings-dialog
+      :value="is_open_settings"
+      :color="theme_color"
+      @input="is_open_settings = $event" />
 
     <!-- About 다이얼 로그 -->
     <about-dialog
@@ -259,6 +136,7 @@ import { Nullable } from "../types/default";
 import MainTable from "./components/MainTable.vue";
 import AboutDialog from "./components/AboutDialog.vue";
 import LoadInterface from "./components/LoadInterface.vue";
+import SettingsDialog from "./components/SettingsDialog.vue";
 import { Mode } from "../main/modules/database";
 
 export default Vue.extend({
@@ -333,25 +211,13 @@ export default Vue.extend({
       is_open_load: false, // 불러오기 다이얼로그
       is_open_save_data: false, // 불러오기 안의 자동 저장 목록 다이얼로그
       // =========================================================================
-
-      settings: {
-        program_entire_settings: {
-          max_parallel: 100,
-        },
-        user_preferences: {
-          clear_data_on_search: true,
-        },
-        auto_save: {
-          auto_save_result: true,
-          max_auto_save: 10,
-        },
-      } as Settings,
     };
   },
   components: {
     MainTable,
     AboutDialog,
     LoadInterface,
+    SettingsDialog,
   },
 
   // 처음 실행시 실행되는 함수
@@ -381,20 +247,20 @@ export default Vue.extend({
         keyword: this.keyword,
         settings: {
           program_entire_settings: {
-            max_parallel: this.settings.program_entire_settings.max_parallel,
+            max_parallel: 100,
           },
           user_preferences: {
-            clear_data_on_search:
-              this.settings.user_preferences.clear_data_on_search,
+            clear_data_on_search: true,
           },
           auto_save: {
-            auto_save_result: this.settings.auto_save.auto_save_result,
-            max_auto_save: this.settings.auto_save.max_auto_save,
+            auto_save_result: true,
+            max_auto_save: 10,
           },
         },
       };
 
       try {
+        console.time("설정 파일 처리 시간");
         // IPC로 설정 파일 초기화 및 로드 요청
         const result = await ipcRenderer.invoke(
           IPCChannel.FileSystem.INITIALIZE_SETTINGS,
@@ -410,9 +276,12 @@ export default Vue.extend({
           this.gallery_id = parsed_data.gallery_id;
           this.keyword = parsed_data.keyword;
           this.select_box.selected_item = parsed_data.search_type;
-          this.settings = parsed_data.settings;
+
+          // Vuex store에 settings 저장
+          this.$store.commit("set_settings", parsed_data.settings);
 
           console.log("설정 파일을 성공적으로 불러왔습니다.");
+          console.timeEnd("설정 파일 처리 시간");
         } else {
           console.error("설정 파일 초기화 중 오류 발생:", result.error);
         }
@@ -476,6 +345,8 @@ export default Vue.extend({
     // IPC를 통한 글 DB 데이터 불러오기
     async load_article_db() {
       try {
+        console.time("DB를 불러왔습니다");
+
         const article_data = await ipcRenderer.invoke(
           IPCChannel.DB.LOAD_ARTICLE_SEARCH_LOG,
           "all"
@@ -483,10 +354,11 @@ export default Vue.extend({
 
         this.save_data.manual_save = article_data.manual_save;
         this.save_data.auto_save = article_data.auto_save;
+        console.timeEnd("DB를 불러왔습니다");
 
-        console.log(article_data);
+        console.log("불러온 DB 데이터 :", article_data);
       } catch (e) {
-        console.error("[load_sessions] IPC 오류", e);
+        console.error("[DB-Load] IPC 오류", e);
       }
     },
 
@@ -569,19 +441,7 @@ export default Vue.extend({
         repeat_cnt: this.repeat_cnt,
         gallery_id: this.gallery_id,
         keyword: this.keyword,
-        settings: {
-          program_entire_settings: {
-            max_parallel: this.settings.program_entire_settings.max_parallel,
-          },
-          user_preferences: {
-            clear_data_on_search:
-              this.settings.user_preferences.clear_data_on_search,
-          },
-          auto_save: {
-            auto_save_result: this.settings.auto_save.auto_save_result,
-            max_auto_save: this.settings.auto_save.max_auto_save,
-          },
-        } as Settings,
+        settings: this.$store.getters.get_settings,
       };
 
       // IPC로 파일 저장 요청
@@ -622,11 +482,6 @@ export default Vue.extend({
     // 왼쪽 위 석삼자 누를 시 실행되는 함수
     open_drawer() {
       this.is_open_drawer = !this.is_open_drawer;
-    },
-    // 설정 파일 확인 버튼 누를 시 실행되는 함수
-    submit_settings() {
-      // dialog 닫기
-      this.is_open_settings = false;
     },
     search_keypress(e: KeyboardEvent) {
       if (e.key === "Enter") {
@@ -833,8 +688,17 @@ export default Vue.extend({
         this.$store.commit("set_gallery_id", value);
       },
     },
+
+    // settings를 Vuex store와 연동
+    settings: {
+      get(): Settings {
+        return this.$store.getters.get_settings;
+      },
+      set(value: Settings) {
+        this.$store.commit("set_settings", value);
+      },
+    },
   },
-  watch: {},
 });
 </script>
 
