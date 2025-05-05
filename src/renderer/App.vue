@@ -67,6 +67,14 @@
           @manual_save="save_manual_data"></main-table>
       </v-container>
     </v-main>
+
+    <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
+    <navigation-drawer
+      :is-open="is_open_drawer"
+      :items="drawer_items"
+      @update:is_open="is_open_drawer = $event"
+      @item-click="drawer_item_click" />
+
     <!-- 설정 다이얼 로그 -->
     <settings-dialog
       :value="is_open_settings"
@@ -87,36 +95,6 @@
       :color="theme_color"
       :auto_save_data="save_data.auto_save"
       :manual_save_data="save_data.manual_save"></load-interface>
-
-    <!-- 왼쪽 네비게이션 서랍 (Drawer) -->
-    <v-navigation-drawer v-model="is_open_drawer" absolute temporary>
-      <v-list-item>
-        <v-list-item-content>
-          <v-list-item-title class="text-h6 font-weight-bold">
-            디시인사이드 글 검색기
-          </v-list-item-title>
-          <v-list-item-subtitle>written by pgh268400</v-list-item-subtitle>
-        </v-list-item-content>
-      </v-list-item>
-      <v-divider></v-divider>
-      <v-list dense nav>
-        <v-list-item
-          v-for="item in drawer_items"
-          :key="item.title"
-          link
-          @click="drawer_item_click(item.action)">
-          <v-list-item-icon>
-            <v-icon>{{ item.icon }}</v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <!-- 폰트 class 로 조정 -->
-            <v-list-item-title class="font-weight-regular">
-              {{ item.title }}
-            </v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
   </v-app>
 </template>
 
@@ -137,6 +115,7 @@ import MainTable from "./components/MainTable.vue";
 import AboutDialog from "./components/About.vue";
 import LoadInterface from "./components/LoadInterface.vue";
 import SettingsDialog from "./components/Settings.vue";
+import NavigationDrawer from "./components/NavigationDrawer.vue";
 import { Mode } from "../main/modules/lmdb";
 
 export default Vue.extend({
@@ -218,6 +197,7 @@ export default Vue.extend({
     AboutDialog,
     LoadInterface,
     SettingsDialog,
+    NavigationDrawer,
   },
 
   // 처음 실행시 실행되는 함수
