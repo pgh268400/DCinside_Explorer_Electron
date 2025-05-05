@@ -137,7 +137,6 @@ export default Vue.extend({
       keyword: "", // 검색어
       // =======================================================
 
-      auto_save_data: [] as SaveArticleData[],
       drawer_items: [
         {
           title: "설정",
