@@ -4,6 +4,7 @@ import "./registerServiceWorker";
 import router from "./router";
 import store from "./store";
 import vuetify from "./plugins/vuetify";
+import "./styles/global.css"; // 전역 스타일 import
 
 import Toast from "vue-toastification";
 // Import the CSS or use your own!

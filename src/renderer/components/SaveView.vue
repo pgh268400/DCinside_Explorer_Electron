@@ -4,7 +4,7 @@
     <v-card>
       <v-toolbar density="compact" :color="color" dense>
         <v-toolbar-title>
-          <span style="color: white">SaveView</span>
+          <span style="color: white" class="no-drag">SaveView</span>
         </v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon dark @click="sync_is_open_dialog = false">

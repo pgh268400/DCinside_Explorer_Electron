@@ -4,7 +4,7 @@
       <v-card>
         <v-toolbar density="compact" :color="color" dense>
           <v-toolbar-title>
-            <span style="color: white">Load Interface</span>
+            <span style="color: white" class="no-drag">Load Interface</span>
           </v-toolbar-title>
           <v-spacer></v-spacer>
           <v-btn icon @click="sync_is_open_dialog = false" class="no-drag">
@@ -56,7 +56,7 @@
 
 <script lang="ts">
 import { Nullable } from "@/types/default";
-import { SaveArticleData, SaveData } from "@/types/view";
+import { SaveArticleData } from "@/types/view";
 import { defineComponent } from "vue";
 import SaveAllList from "./SaveList.vue";
 export default defineComponent({
@@ -65,9 +65,11 @@ export default defineComponent({
     color: String,
     auto_save_data: {
       type: Array as () => SaveArticleData[],
+      default: () => [],
     },
     manual_save_data: {
       type: Array as () => SaveArticleData[],
+      default: () => [],
     },
   },
   data() {

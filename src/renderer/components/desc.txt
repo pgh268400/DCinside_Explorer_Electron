@@ -1,1 +1,0 @@
-router에서 보여주는 component 파일은 views 폴더에 넣는다. 그 외에는 components 폴더다.

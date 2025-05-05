@@ -6,7 +6,7 @@ import {
   get_full_logs,
   load_search_logs,
   Mode,
-} from "../modules/database";
+} from "../modules/lmdb";
 
 // DB 관련 IPC 핸들러 등록 함수
 export function register_database_handlers() {

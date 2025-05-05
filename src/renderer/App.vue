@@ -134,10 +134,10 @@ import {
 } from "../types/view";
 import { Nullable } from "../types/default";
 import MainTable from "./components/MainTable.vue";
-import AboutDialog from "./components/AboutDialog.vue";
+import AboutDialog from "./components/About.vue";
 import LoadInterface from "./components/LoadInterface.vue";
-import SettingsDialog from "./components/SettingsDialog.vue";
-import { Mode } from "../main/modules/database";
+import SettingsDialog from "./components/Settings.vue";
+import { Mode } from "../main/modules/lmdb";
 
 export default Vue.extend({
   name: "App",

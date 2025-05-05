@@ -1,0 +1,5 @@
+/* Vue에서 사용할 전역 스타일 정의 */
+.no-drag {
+  -webkit-app-region: no-drag;
+  user-select: none;
+}

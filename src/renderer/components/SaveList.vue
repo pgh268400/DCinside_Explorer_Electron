@@ -5,7 +5,7 @@
       <v-card>
         <v-toolbar density="compact" :color="color" dense>
           <v-toolbar-title>
-            <span style="color: white">
+            <span style="color: white" class="no-drag">
               {{ type === "자동" ? "AutoSave List" : "ManualSave List" }}
             </span>
           </v-toolbar-title>

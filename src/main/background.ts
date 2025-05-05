@@ -15,6 +15,7 @@ import path from "path";
 import { register_database_handlers } from "./ipc/database";
 import { register_filesystem_handlers } from "./ipc/filesystem";
 import { register_dcinside_handlers } from "./ipc/dcinside";
+import { register_window_handlers } from "./ipc/window";
 import { IPCChannel } from "@/types/ipc";
 
 // 개발 모드 / 배포 모드 검사용 변수
@@ -80,40 +81,8 @@ async function createWindow() {
     win.loadURL("app://./index.html");
   }
 
-  // win 변수가 필요한 IPC 등록 =========================
-  // 종료 요청 처리
-  ipcMain.on(IPCChannel.Window.CLOSE_ME, () => {
-    app.quit();
-  });
-
-  // 창 최소화 요청 처리
-  ipcMain.on(IPCChannel.Window.MINIMIZE_ME, () => {
-    win.minimize();
-  });
-
-  // 창 포커싱 됐을때 이벤트
-  // win.on("focus", () => {
-  //   // 포커싱 되면 현재 클립보드의 값을 가져온다.
-  //   const clipboard_text = clipboard.readText();
-  //   console.log(clipboard_text);
-
-  //   // 클립보드에 갤러리 주소가 있는지 확인하고, id를 추출한다.
-  //   // (\w+) = 단어 추출 (숫자, 영문, _)
-  //   const pattern = /https:\/\/gall\.dcinside\.com\/.+\/.+\/?\?id=(\w+)/;
-
-  //   const match = clipboard_text.match(pattern);
-
-  //   if (match) {
-  //     const gallery_id = match[1]; // "habj"
-  //     console.log(gallery_id);
-  //   }
-  // });
-
-  // 창 포커싱 풀렸을 때 이벤트
-  // win.on("blur", () => {
-  //   console.log("window blur");
-  // });
-  // ===================================================
+  // window 관련 IPC 핸들러 등록
+  register_window_handlers(win);
 }
 
 // 모든 창이 닫혔을 때 앱 종료

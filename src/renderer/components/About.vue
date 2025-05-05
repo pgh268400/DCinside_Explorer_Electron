@@ -1,9 +1,10 @@
+<!-- eslint-disable vue/multi-word-component-names -->
 <template>
   <v-dialog v-model="sync_is_open_dialog" width="550px">
     <v-card>
       <v-toolbar density="compact" :color="color" dense>
         <v-toolbar-title>
-          <span style="color: white">About</span>
+          <span style="color: white" class="no-drag">About</span>
         </v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="closeDialog">
@@ -75,7 +76,6 @@ export default defineComponent({
   font-size: 28px;
   font-weight: bold;
   text-align: center;
-  text-decoration: underline;
 
   /* 무지개 배경 그라디언트 */
   background: linear-gradient(

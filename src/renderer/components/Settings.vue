@@ -6,7 +6,7 @@
       <!-- 상단 툴바 - 제목과 닫기 버튼 포함 -->
       <v-toolbar density="compact" :color="color" dense>
         <v-toolbar-title>
-          <span style="color: white">Settings</span>
+          <span style="color: white" class="no-drag">Settings</span>
         </v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn icon @click="close" class="no-drag">
@@ -24,9 +24,9 @@
               outlined
               clearable
               v-model.number="
-                localSettings.program_entire_settings.max_parallel
+                local_settings.program_entire_settings.max_parallel
               "
-              @input="updateSetting"
+              @input="update_setting"
               height="auto"
               type="number"
               hide-spin-buttons></v-text-field>
@@ -57,7 +57,7 @@
               <br />
               <b>
                 기본값 :
-                {{ localSettings.program_entire_settings.max_parallel }}
+                {{ local_settings.program_entire_settings.max_parallel }}
               </b>
             </span>
           </v-tooltip>
@@ -70,8 +70,8 @@
           <v-list-item-action>
             <!-- 검색 시 기존 결과 초기화 체크박스 -->
             <v-checkbox
-              v-model="localSettings.user_preferences.clear_data_on_search"
-              @change="updateSetting"></v-checkbox>
+              v-model="local_settings.user_preferences.clear_data_on_search"
+              @change="update_setting"></v-checkbox>
           </v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>검색 시 기존 검색 결과 초기화</v-list-item-title>
@@ -88,8 +88,8 @@
           <v-list-item-action>
             <!-- 자동 저장 활성화 체크박스 -->
             <v-checkbox
-              v-model="localSettings.auto_save.auto_save_result"
-              @change="updateSetting"></v-checkbox>
+              v-model="local_settings.auto_save.auto_save_result"
+              @change="update_setting"></v-checkbox>
           </v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>자동 저장 활성화</v-list-item-title>
@@ -106,13 +106,13 @@
               label="최대 자동 저장 횟수"
               outlined
               clearable
-              v-model.number="localSettings.auto_save.max_auto_save"
-              @input="updateSetting"
+              v-model.number="local_settings.auto_save.max_auto_save"
+              @input="update_setting"
               height="auto"
               type="number"
               hide-spin-buttons
               :disabled="
-                !localSettings.auto_save.auto_save_result
+                !local_settings.auto_save.auto_save_result
               "></v-text-field>
           </v-list-item-content>
           <!-- 자동 저장 도움말 툴팁 -->
@@ -135,7 +135,7 @@
               큰 값을 입력하면 무한정 저장하게 할 수 있으나 용량도 무한히 늘어날
               수 있으니 주의해야 합니다.
               <br />
-              <b>기본값 : {{ localSettings.auto_save.max_auto_save }}</b>
+              <b>기본값 : {{ local_settings.auto_save.max_auto_save }}</b>
             </span>
           </v-tooltip>
         </v-list-item>
@@ -176,7 +176,7 @@ export default Vue.extend({
   data() {
     return {
       dialog: this.value,
-      localSettings: {
+      local_settings: {
         program_entire_settings: {
           max_parallel: 100,
         },
@@ -209,7 +209,7 @@ export default Vue.extend({
       handler(val) {
         // 다이얼로그가 열릴 때만 초기값 설정
         if (this.dialog) {
-          this.localSettings = JSON.parse(JSON.stringify(val));
+          this.local_settings = JSON.parse(JSON.stringify(val));
         }
       },
     },
@@ -228,21 +228,15 @@ export default Vue.extend({
     // 설정 저장 및 다이얼로그 닫기 메서드
     submit() {
       // 설정 저장 후 다이얼로그 닫기
-      this.set_settings(this.localSettings);
+      this.set_settings(this.local_settings);
       this.close();
     },
 
     // 설정값이 변경될 때마다 호출되는 메서드
-    updateSetting() {
+    update_setting() {
       // 현재 설정값을 Vuex store에 반영
-      this.set_settings(this.localSettings);
+      this.set_settings(this.local_settings);
     },
   },
 });
 </script>
-
-<style scoped>
-.no-drag {
-  -webkit-app-region: no-drag;
-}
-</style>
