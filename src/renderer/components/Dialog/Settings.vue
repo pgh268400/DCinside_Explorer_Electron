@@ -152,7 +152,7 @@
 // Vue와 필요한 모듈들을 임포트
 import Vue from "vue";
 import { mapGetters, mapMutations } from "vuex";
-import { Settings } from "../../types/view";
+import { Settings } from "../../../types/view";
 
 export default Vue.extend({
   // 컴포넌트 이름 정의

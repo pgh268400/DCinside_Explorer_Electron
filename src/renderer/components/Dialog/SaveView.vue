@@ -23,7 +23,7 @@
 <script lang="ts">
 import { AGGridVueArticle } from "@/types/view";
 import { defineComponent } from "vue";
-import MainTable from "./MainTable.vue";
+import MainTable from "../MainTable.vue";
 export default defineComponent({
   props: {
     is_open_dialog: Boolean,

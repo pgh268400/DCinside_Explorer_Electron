@@ -112,9 +112,9 @@ import {
 } from "../types/view";
 import { Nullable } from "../types/default";
 import MainTable from "./components/MainTable.vue";
-import AboutDialog from "./components/About.vue";
-import LoadInterface from "./components/LoadInterface.vue";
-import SettingsDialog from "./components/Settings.vue";
+import AboutDialog from "./components/Dialog/About.vue";
+import LoadInterface from "./components/Dialog/LoadInterface.vue";
+import SettingsDialog from "./components/Dialog/Settings.vue";
 import NavigationDrawer from "./components/NavigationDrawer.vue";
 import { Mode } from "../main/modules/lmdb";
 
