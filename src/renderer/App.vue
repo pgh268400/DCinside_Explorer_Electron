@@ -244,7 +244,6 @@ import { ipcRenderer, IpcRendererEvent } from "electron";
 import Vue from "vue";
 import { Article } from "../types/dcinside";
 import { DCWebRequest, IPCChannel } from "../types/ipc";
-import fs from "fs";
 import {
   AGGridVueArticle,
   DrawerAction,
@@ -256,7 +255,6 @@ import { Nullable } from "../types/default";
 import MainTable from "./components/MainTable.vue";
 import AboutDialog from "./components/AboutDialog.vue";
 import LoadInterface from "./components/LoadInterface.vue";
-import path from "path";
 import { Mode } from "../main/modules/database";
 
 export default Vue.extend({
@@ -851,7 +849,7 @@ export default Vue.extend({
 }
 
 /* 카드 뾰족하게 */
-.v-sheet.v-card {
+/* .v-sheet.v-card {
   border-radius: 0px;
-}
+} */
 </style>

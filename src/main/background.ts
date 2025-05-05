@@ -11,11 +11,11 @@ import {
 } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
-import { DCAsyncParser } from "./modules/dcparser";
-import { DCWebRequest, IPCChannel } from "@/types/ipc";
 import path from "path";
-import fs from "fs";
-import { register_database_handlers } from "./ipc/database"; // DB 핸들러 등록 함수 import
+import { register_database_handlers } from "./ipc/database";
+import { register_filesystem_handlers } from "./ipc/filesystem";
+import { register_dcinside_handlers } from "./ipc/dcinside";
+import { IPCChannel } from "@/types/ipc";
 
 // 개발 모드 / 배포 모드 검사용 변수
 const is_development = process.env.NODE_ENV !== "production";
@@ -90,7 +90,6 @@ async function createWindow() {
   ipcMain.on(IPCChannel.Window.MINIMIZE_ME, () => {
     win.minimize();
   });
-  // ===================================================
 
   // 창 포커싱 됐을때 이벤트
   // win.on("focus", () => {
@@ -114,6 +113,7 @@ async function createWindow() {
   // win.on("blur", () => {
   //   console.log("window blur");
   // });
+  // ===================================================
 }
 
 // 모든 창이 닫혔을 때 앱 종료
@@ -145,158 +145,17 @@ app.on("ready", async () => {
   //     console.error("❌ Vue DevTools 설치 실패:", e.toString());
   //   }
   // }
-  createWindow();
-
-  // 파싱 객체를 ipcMain 에서 전역적으로 사용할 수 있도록 한다.
-  let parser: DCAsyncParser;
-
-  // 웹 요청 처리 (검색)
-  ipcMain.on(IPCChannel.Web.REQUEST, async (event, arg: DCWebRequest) => {
-    const { id, repeat_cnt, keyword, search_type, option } = arg;
-    try {
-      // const parser = await DCAsyncParser.create(id);
-      // 검색 버튼을 누를때마다 객체를 새로 생성하여 검색한다.
-      // 객체 생성 & 초기화 시점 : 검색 버튼을 누를때
-      parser = await DCAsyncParser.create(id, option);
-      const result = await parser.search(
-        search_type,
-        keyword,
-        repeat_cnt,
-        (progress: string, status: string) => {
-          event.sender.send(IPCChannel.Web.REQUEST_PROGRESS, progress, status);
-        }
-      );
-
-      // await fs.promises.writeFile("result.json", JSON.stringify(result));
-      event.sender.send(IPCChannel.Web.RESPONSE, result);
-    } catch (e: any) {
-      console.error(e);
-      event.sender.send(IPCChannel.Web.RESPONSE, []);
-    }
-  });
-
-  // 갤러리 ID 클릭 시 해당 갤러리 페이지 여는 IPC
-  ipcMain.on(
-    IPCChannel.Link.OPEN_LINK,
-    async (_event, gallery_id: string, no: string) => {
-      if (parser) {
-        const g_type = parser.get_garllery_type();
-        const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallery_id}&no=${no}`;
-        shell.openExternal(url);
-      } else {
-        // parser 가 존재하지 않으면 검색을 하지 않은 상태에서 저장해둔 목록의 링크를 클릭했다는 것.
-        // parser 을 생성하고 해당 링크를 열어주도록 한다.
-        parser = await DCAsyncParser.create(gallery_id);
-        const g_type = parser.get_garllery_type();
-        const url = `https://gall.dcinside.com/${g_type}board/view/?id=${gallery_id}&no=${no}`;
-        shell.openExternal(url);
-      }
-    }
-  );
-
-  // 파일 시스템 관련 IPC 핸들러
-  ipcMain.handle(
-    IPCChannel.FileSystem.SAVE_SETTINGS,
-    async (_event, file_path: string, data: any) => {
-      try {
-        // 들어온 데이터를 그대로 들어온 경로에 저장
-        const json_data = JSON.stringify(data, null, 2);
-        await fs.promises.writeFile(file_path, json_data, "utf-8");
-        return { success: true };
-      } catch (error: any) {
-        console.error("[File System] 오류 발생:", error);
-        return { success: false, error: error.message };
-      }
-    }
-  );
-
-  // 설정 파일 초기화 및 로드 IPC 핸들러
-  ipcMain.handle(
-    IPCChannel.FileSystem.INITIALIZE_SETTINGS,
-    async (_event, file_path: string, default_data: any) => {
-      try {
-        // 디렉토리 경로를 추출
-        const dir = path.dirname(file_path);
-
-        // 디렉토리가 존재하지 않으면 설정 폴더를 우선 생성
-        await fs.promises.mkdir(dir, { recursive: true });
-
-        // 파일을 (새로 / 다시) 생성해야 하는지 여부, 기본값은 false
-        let should_create_file = false;
-
-        // 파일이 이미 존재하는지 확인
-        try {
-          // access 함수 = 파일이 존재하지 않으면 ENOENT예외 발생하여 catch로 강제 이동되고, 아니면 그냥 무시되고 다음 Line 실행
-          await fs.promises.access(file_path, fs.constants.F_OK);
-
-          // 파일이 존재하면 내용을 읽어서 확인
-          const file_content = await fs.promises.readFile(file_path, "utf-8");
-          const trimmed_content = file_content.trim();
-
-          // 파일에 아무것도 안적혀 있거나 공백만 있는 경우
-          if (!trimmed_content) {
-            console.log("설정 파일이 비어있어 기본값으로 초기화합니다.");
-            should_create_file = true; // 파일 재생성 필요
-          } else {
-            try {
-              // JSON 파싱 시도
-              JSON.parse(trimmed_content);
-            } catch (e) {
-              // JSON 파싱 실패 시 파일 재생성 필요
-              console.log(
-                "설정 파일이 유효하지 않은 JSON 형식이어서 기본값으로 초기화합니다."
-              );
-              should_create_file = true;
-            }
-          }
-        } catch (_) {
-          // 파일이 존재하지 않는 경우 당연히 생성 필요
-          console.log("초기 설정 파일이 존재하지 않아 새로 생성합니다.");
-          should_create_file = true;
-        }
-
-        // 파일을 생성하거나 재생성해야 하는 경우
-        if (should_create_file) {
-          const json_data = JSON.stringify(default_data, null, 2);
-          await fs.promises.writeFile(file_path, json_data, "utf-8");
-          return { success: true, data: default_data };
-        }
-
-        // 여기까지 왔으면 파일이 제대로 생성 및 처리 됐다고 볼 수 있다.
-        // 이제 파일 내용을 읽어서 렌더러에 전달
-        const data = await fs.promises.readFile(file_path, "utf-8");
-        return { success: true, data: JSON.parse(data) };
-      } catch (error: any) {
-        console.error("[File System] 초기화 중 오류 발생:", error);
-        return { success: false, error: error.message };
-      }
-    }
-  );
-
-  /*
-    갤러리 텍스트명 조회 IPC 처리
-    ex)
-    -  렌더러 요청: { "lies_of_p": null }
-    -  메인 프로세스 응답: { "lies_of_p": "P의 거짓 마이너 갤러리" }
-  */
-  ipcMain.handle(
-    IPCChannel.Gallery.GET_TEXT_NAME, // 채널 등록
-    async (_event, id_dict: Record<string, null>) => {
-      // 요청 타입
-      const result: Record<string, string> = {};
-      for (const id of Object.keys(id_dict)) {
-        const parser = await DCAsyncParser.create(id); // 파서 생성
-        result[id] = await parser.get_gallery_text_name(); // 텍스트명 조회
-      }
-      console.log("[Main] 데이터 준비 완료 : ", id_dict);
-
-      return result; // 응답 반환
-    }
-  );
+  createWindow(); // 이 아래에 IPC 핸들러 등록
 });
 
-// DB 관련 IPC 핸들러 등록
+// DB CRUD 관련 IPC 핸들러 등록
 register_database_handlers();
+
+// UI 파일 저장 / 불러오기 관련 IPC 핸들러 등록
+register_filesystem_handlers();
+
+// 디시인사이드 웹 처리 관련 IPC 핸들러 등록
+register_dcinside_handlers();
 
 // Exit cleanly on request from parent process in development mode.
 if (is_development) {
