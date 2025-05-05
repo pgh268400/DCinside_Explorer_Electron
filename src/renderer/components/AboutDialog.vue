@@ -5,6 +5,10 @@
         <v-toolbar-title>
           <span style="color: white">About</span>
         </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon @click="closeDialog">
+          <v-icon color="white">mdi-close</v-icon>
+        </v-btn>
       </v-toolbar>
       <div class="pa-4 text-center">
         <v-subheader class="justify-center">
@@ -58,6 +62,9 @@ export default defineComponent({
   methods: {
     open_about_link() {
       shell.openExternal("https://github.com/pgh268400");
+    },
+    closeDialog() {
+      this.sync_is_open_dialog = false;
     },
   },
 });

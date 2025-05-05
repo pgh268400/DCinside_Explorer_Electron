@@ -74,6 +74,10 @@
           <v-toolbar-title>
             <span style="color: white">Settings</span>
           </v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="is_open_settings = false" class="no-drag">
+            <v-icon color="white">mdi-close</v-icon>
+          </v-btn>
         </v-toolbar>
         <div class="pa-2">
           <v-subheader>프로그램 전체 동작 설정</v-subheader>

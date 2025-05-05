@@ -1,3 +1,4 @@
+<!-- 자동 저장 / 수동 저장 보여주기를 하나의 컴포넌트로 처리한다 -->
 <template>
   <v-dialog v-model="sync_is_open_dialog">
     <v-card>
@@ -5,6 +6,10 @@
         <v-toolbar-title>
           <span style="color: white">SaveView</span>
         </v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn icon dark @click="sync_is_open_dialog = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
       </v-toolbar>
       <div class="pa-6">
         <main-table

@@ -1,11 +1,18 @@
+<!-- 자동 저장 / 수동 저장 목록을 하나의 컴포넌트로 처리한다 -->
 <template>
   <div>
     <v-dialog v-model="sync_is_open_dialog" width="500px">
       <v-card>
         <v-toolbar density="compact" :color="color" dense>
           <v-toolbar-title>
-            <span style="color: white">SaveAllList</span>
+            <span style="color: white">
+              {{ type === "자동" ? "AutoSave List" : "ManualSave List" }}
+            </span>
           </v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="close_dialog">
+            <v-icon color="white">mdi-close</v-icon>
+          </v-btn>
         </v-toolbar>
         <div class="pa-4">
           <v-list-item two-line>
@@ -140,6 +147,9 @@ export default defineComponent({
     },
   },
   methods: {
+    close_dialog() {
+      this.sync_is_open_dialog = false;
+    },
     click_auto_save_item(article: SaveArticleData) {
       this.selected_auto_save_data = article;
       this.is_open_save_data = !this.is_open_save_data;

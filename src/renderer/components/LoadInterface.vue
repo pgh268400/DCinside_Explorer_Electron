@@ -1,31 +1,32 @@
 <template>
   <div>
-    <v-dialog v-model="sync_is_open_dialog" width="450px">
+    <v-dialog v-model="sync_is_open_dialog" width="400px">
       <v-card>
         <v-toolbar density="compact" :color="color" dense>
           <v-toolbar-title>
-            <span style="color: white">LoadInterface</span>
+            <span style="color: white">Load Interface</span>
           </v-toolbar-title>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="sync_is_open_dialog = false" class="no-drag">
+            <v-icon color="white">mdi-close</v-icon>
+          </v-btn>
         </v-toolbar>
         <div class="pa-4">
           <v-list-item two-line>
             <v-list-item-content>
               <v-list-item-title class="text-h5">저장 목록</v-list-item-title>
-              <v-list-item-subtitle>
+              <v-list-item-subtitle class="mb-2">
                 어떤 저장 목록을 확인하실 지 선택해주세요
               </v-list-item-subtitle>
             </v-list-item-content>
           </v-list-item>
           <v-list-item>
             <v-list-item-content>
-              <v-btn
-                color="primary"
-                class="mb-3"
-                @click="click_manual_save_item">
-                수동 저장 목록
-              </v-btn>
-              <v-btn color="primary" @click="click_auto_save_item">
+              <v-btn color="primary" class="mb-3" @click="click_auto_save_item">
                 자동 저장 목록
+              </v-btn>
+              <v-btn color="success" @click="click_manual_save_item">
+                수동 저장 목록
               </v-btn>
             </v-list-item-content>
           </v-list-item>
@@ -57,7 +58,7 @@
 import { Nullable } from "@/types/default";
 import { SaveArticleData, SaveData } from "@/types/view";
 import { defineComponent } from "vue";
-import SaveAllList from "./SaveAllList.vue";
+import SaveAllList from "./SaveList.vue";
 export default defineComponent({
   props: {
     is_open_dialog: Boolean,
