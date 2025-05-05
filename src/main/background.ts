@@ -14,16 +14,11 @@ import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import { DCAsyncParser } from "./modules/dcparser";
 import { DCWebRequest, IPCChannel } from "@/types/ipc";
 import path from "path";
-import {
-  get_all_logs,
-  get_full_logs,
-  load_search_logs,
-  save_search_log,
-  delete_search_log,
-} from "./modules/database";
 import fs from "fs";
+import { register_database_handlers } from "./ipc/database"; // DB 핸들러 등록 함수 import
 
-const isDevelopment = process.env.NODE_ENV !== "production";
+// 개발 모드 / 배포 모드 검사용 변수
+const is_development = process.env.NODE_ENV !== "production";
 
 const width = 1275 + 400;
 
@@ -215,6 +210,69 @@ app.on("ready", async () => {
     }
   );
 
+  // 설정 파일 초기화 및 로드 IPC 핸들러
+  ipcMain.handle(
+    IPCChannel.FileSystem.INITIALIZE_SETTINGS,
+    async (_event, file_path: string, default_data: any) => {
+      try {
+        // 디렉토리 경로를 추출
+        const dir = path.dirname(file_path);
+
+        // 디렉토리가 존재하지 않으면 설정 폴더를 우선 생성
+        await fs.promises.mkdir(dir, { recursive: true });
+
+        // 파일을 (새로 / 다시) 생성해야 하는지 여부, 기본값은 false
+        let should_create_file = false;
+
+        // 파일이 이미 존재하는지 확인
+        try {
+          // access 함수 = 파일이 존재하지 않으면 ENOENT예외 발생하여 catch로 강제 이동되고, 아니면 그냥 무시되고 다음 Line 실행
+          await fs.promises.access(file_path, fs.constants.F_OK);
+
+          // 파일이 존재하면 내용을 읽어서 확인
+          const file_content = await fs.promises.readFile(file_path, "utf-8");
+          const trimmed_content = file_content.trim();
+
+          // 파일에 아무것도 안적혀 있거나 공백만 있는 경우
+          if (!trimmed_content) {
+            console.log("설정 파일이 비어있어 기본값으로 초기화합니다.");
+            should_create_file = true; // 파일 재생성 필요
+          } else {
+            try {
+              // JSON 파싱 시도
+              JSON.parse(trimmed_content);
+            } catch (e) {
+              // JSON 파싱 실패 시 파일 재생성 필요
+              console.log(
+                "설정 파일이 유효하지 않은 JSON 형식이어서 기본값으로 초기화합니다."
+              );
+              should_create_file = true;
+            }
+          }
+        } catch (_) {
+          // 파일이 존재하지 않는 경우 당연히 생성 필요
+          console.log("초기 설정 파일이 존재하지 않아 새로 생성합니다.");
+          should_create_file = true;
+        }
+
+        // 파일을 생성하거나 재생성해야 하는 경우
+        if (should_create_file) {
+          const json_data = JSON.stringify(default_data, null, 2);
+          await fs.promises.writeFile(file_path, json_data, "utf-8");
+          return { success: true, data: default_data };
+        }
+
+        // 여기까지 왔으면 파일이 제대로 생성 및 처리 됐다고 볼 수 있다.
+        // 이제 파일 내용을 읽어서 렌더러에 전달
+        const data = await fs.promises.readFile(file_path, "utf-8");
+        return { success: true, data: JSON.parse(data) };
+      } catch (error: any) {
+        console.error("[File System] 초기화 중 오류 발생:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
+
   /*
     갤러리 텍스트명 조회 IPC 처리
     ex)
@@ -237,42 +295,11 @@ app.on("ready", async () => {
   );
 });
 
-// IPC 핸들러 등록
-ipcMain.handle(
-  IPCChannel.DB.SAVE_ARTICLE_SEARCH_LOG,
-  async (_event, { mode, user_input, article_data }) => {
-    try {
-      await save_search_log(article_data.items, user_input, mode);
-      return { success: true };
-    } catch (err: any) {
-      console.error("[db-save-search-log] 오류 발생:", err);
-      return { success: false, error: err.message };
-    }
-  }
-);
-
-ipcMain.handle(
-  IPCChannel.DB.LOAD_ARTICLE_SEARCH_LOG,
-  async (_event, load_mode) => {
-    if (load_mode === "all") {
-      // ── auto / manual 각각 원본 배열 조회 ────────────────────
-      const auto_logs = await get_full_logs("auto");
-      const manual_logs = await get_full_logs("manual");
-
-      // 원하는 형태로 객체 묶어서 반환
-      return {
-        auto_save: auto_logs, // 자동 저장 로그 배열
-        manual_save: manual_logs, // 수동 저장 로그 배열
-      };
-    }
-
-    // 단일 모드(flatten) 조회는 그대로 유지
-    return await load_search_logs(load_mode);
-  }
-);
+// DB 관련 IPC 핸들러 등록
+register_database_handlers();
 
 // Exit cleanly on request from parent process in development mode.
-if (isDevelopment) {
+if (is_development) {
   if (process.platform === "win32") {
     process.on("message", (data) => {
       if (data === "graceful-exit") {

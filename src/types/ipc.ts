@@ -30,6 +30,7 @@ export const IPCChannel = {
   },
   FileSystem: {
     SAVE_SETTINGS: "file-system:save-settings",
+    INITIALIZE_SETTINGS: "file-system:initialize-settings",
   },
 } as const;
 

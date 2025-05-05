@@ -22,6 +22,8 @@ interface AGGridVueArticle {
 
 // 글 자동 저장 / 일반 저장으로 사용할 데이터 타입 정의
 interface SaveArticleData {
+  log_id: number; // 자동 증가 시퀀스 ID
+  created_at: string; // 로그 저장 시각 ISO 문자열
   user_input: UserInput;
   article_data: AGGridVueArticle[];
 }

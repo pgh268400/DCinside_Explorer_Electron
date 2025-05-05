@@ -257,6 +257,7 @@ import MainTable from "./components/MainTable.vue";
 import AboutDialog from "./components/AboutDialog.vue";
 import LoadInterface from "./components/LoadInterface.vue";
 import path from "path";
+import { Mode } from "../main/modules/database";
 
 export default Vue.extend({
   name: "App",
@@ -369,8 +370,8 @@ export default Vue.extend({
   methods: {
     // 가장 초기에 UI 설정 파일을 준비하기 위해 호출되는 함수(mounted에서 사용)
     async initialize_ui() {
-      // 파일이 없으면 우선적으로 생성
-      await this.make_settings_file(this.setting_file_location, {
+      // 기본 설정 데이터 준비
+      const default_data = {
         // v-select는 첫 번째 아이템으로 기본값 설정
         search_type: this.select_box.items[0],
         repeat_cnt: this.repeat_cnt,
@@ -389,94 +390,84 @@ export default Vue.extend({
             max_auto_save: this.settings.auto_save.max_auto_save,
           },
         },
-      });
+      };
 
-      // 설정 파일을 불러오고 UI에 반영한다
       try {
-        const data = await fs.promises.readFile(
+        // IPC로 설정 파일 초기화 및 로드 요청
+        const result = await ipcRenderer.invoke(
+          IPCChannel.FileSystem.INITIALIZE_SETTINGS,
           this.setting_file_location,
-          "utf-8"
+          default_data
         );
-        const parsed_data: SaveData = JSON.parse(data);
 
-        this.repeat_cnt = parsed_data.repeat_cnt;
-        this.gallery_id = parsed_data.gallery_id;
-        this.keyword = parsed_data.keyword;
-        this.select_box.selected_item = parsed_data.search_type;
-        this.settings = parsed_data.settings;
+        if (result.success) {
+          const parsed_data: SaveData = result.data;
 
-        console.log("설정 파일을 성공적으로 불러왔습니다.");
-      } catch (e) {
-        console.log("설정 파일을 불러오는 중 오류가 발생했습니다.", e);
-      }
-    },
+          // UI에 설정 데이터 반영
+          this.repeat_cnt = parsed_data.repeat_cnt;
+          this.gallery_id = parsed_data.gallery_id;
+          this.keyword = parsed_data.keyword;
+          this.select_box.selected_item = parsed_data.search_type;
+          this.settings = parsed_data.settings;
 
-    async delete_article(_obj: any) {
-      // console.log(obj);
-      // // 삭제 버튼을 연타하면 오류가 발생하므로 연타를 못하게 바로 데이터 상에서 날려버린다.
-      // if (obj.type === "manual") {
-      //   this.save_data.manual_save.splice(obj.index, 1); // RAM 상에서도 삭제
-      // } else {
-      //   this.save_data.auto_save.splice(obj.index, 1); // RAM 상에서도 삭제
-      // }
-      // try {
-      //   const data = await fs.promises.readFile(
-      //     this.setting_file_location,
-      //     "utf-8"
-      //   );
-      //   const parsed_data: SaveData = JSON.parse(data);
-      //   if (!parsed_data.auto_save)
-      //     throw new Error("오류 : auto_save 데이터가 존재하지 않습니다");
-      //   if (!parsed_data.manual_save)
-      //     throw new Error("오류 : manual_save 데이터가 존재하지 않습니다");
-      //   // 인덱스에 해당하는 데이터 삭제
-      //   // 자바스크립트에서 splice는 원본 배열을 수정한다.
-      //   if (obj.type === "manual") {
-      //     parsed_data.manual_save.splice(obj.index, 1);
-      //   } else {
-      //     parsed_data.auto_save.splice(obj.index, 1);
-      //   }
-      //   // 파일에 쓰기
-      //   const json_data = JSON.stringify(parsed_data, null, 2); // 데이터를 JSON 문자열로 변환하고 가독성을 위해 두 번째 매개변수로 null, 2를 전달
-      //   await fs.promises.writeFile(
-      //     this.setting_file_location,
-      //     json_data,
-      //     "utf-8"
-      //   ); // 파일에 JSON 데이터 쓰기
-      // } catch (error: any) {
-      //   console.log(error);
-      // }
-    },
-
-    // 초기 파일이 없으면 생성하는 함수
-    async make_settings_file(
-      safe_file_location: string, // 일반적으로 ./폴더명/세팅 파일명.json 형태로 들어온다.
-      save_obj_data: SaveData
-    ) {
-      // 디렉토리 경로를 추출
-      const dir = path.dirname(safe_file_location);
-
-      try {
-        // 디렉토리가 존재하지 않으면 설정 폴더를 우선 생성
-        await fs.promises.mkdir(dir, { recursive: true });
-      } catch (e: any) {
-        console.error("설정 디렉토리 생성 중 오류 발생:", e);
-      }
-
-      // 설정 폴더 안에 설정 파일이 없다면 생성한다.
-      try {
-        // 파일이 이미 존재하는지 확인
-        // 이 access 함수는 파일이 존재하지 않으면 ENOENT 예외를 발생시키고, 이미 있다면 아무 일을 하지 않는다.
-        await fs.promises.access(safe_file_location, fs.constants.F_OK);
-      } catch (_) {
-        // 존재하지 않을 경우 생성
-        try {
-          const json_data = JSON.stringify(save_obj_data, null, 2);
-          await fs.promises.writeFile(safe_file_location, json_data, "utf-8");
-          console.log("초기 설정 파일이 존재하지 않아 새로 생성하였습니다.");
-        } catch (e: any) {
-          console.error("설정 파일 생성 중 오류 발생:", e);
+          console.log("설정 파일을 성공적으로 불러왔습니다.");
+        } else {
+          console.error("설정 파일 초기화 중 오류 발생:", result.error);
         }
+      } catch (e) {
+        console.error("설정 파일을 불러오는 중 오류가 발생했습니다.", e);
+      }
+    },
+
+    async delete_article(obj: { type: Mode; index: number }) {
+      try {
+        // 삭제할 로그의 ID를 찾기 위해 해당 인덱스의 로그를 가져옴
+        const target_log =
+          obj.type === "manual"
+            ? this.save_data.manual_save[obj.index]
+            : this.save_data.auto_save[obj.index];
+
+        if (!target_log) {
+          console.error("[삭제] 해당 인덱스의 로그를 찾을 수 없습니다.");
+          return;
+        }
+
+        // IPC로 삭제 요청
+        const res = await ipcRenderer.invoke(
+          IPCChannel.DB.DELETE_ARTICLE_SEARCH_LOG,
+          target_log.log_id,
+          obj.type
+        );
+
+        if (res.success) {
+          console.log(`[삭제] ${obj.type} 로그 삭제 완료`);
+
+          // 메모리에서도 삭제
+          if (obj.type === "manual") {
+            this.save_data.manual_save.splice(obj.index, 1);
+          } else {
+            this.save_data.auto_save.splice(obj.index, 1);
+          }
+
+          this.$toast("삭제가 완료되었습니다", {
+            position: "bottom-center",
+            timeout: 718,
+            closeOnClick: true,
+            pauseOnFocusLoss: true,
+            pauseOnHover: false,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: true,
+            hideProgressBar: true,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+          } as any);
+        } else {
+          console.error("[삭제] 로그 삭제 실패:", res.error);
+        }
+      } catch (error: any) {
+        console.error("[삭제] 오류 발생:", error);
       }
     },
 
@@ -509,7 +500,7 @@ export default Vue.extend({
 
         // IPC로 저장 요청할 데이터 형식
         const data = {
-          mode: "manual",
+          mode: "manual" as Mode,
           user_input: {
             search_type: this.select_box.selected_item,
             repeat_cnt: this.repeat_cnt,
@@ -534,6 +525,8 @@ export default Vue.extend({
           // 데이터 바인딩 수행
           // 수동 저장 데이터 업데이트, 메모리로 저장하는 배열 끝에 삽입
           this.save_data.manual_save.push({
+            log_id: res.log_id,
+            created_at: new Date().toISOString(),
             user_input: {
               search_type: this.select_box.selected_item,
               repeat_cnt: this.repeat_cnt,
@@ -767,7 +760,7 @@ export default Vue.extend({
 
       // IPC로 저장 요청할 데이터 형식
       const data = {
-        mode: "auto",
+        mode: "auto" as Mode,
         user_input: {
           search_type: this.select_box.selected_item,
           repeat_cnt: this.repeat_cnt,
@@ -792,6 +785,8 @@ export default Vue.extend({
         // 데이터 바인딩 수행
         // 자동 저장 데이터 업데이트, 메모리로 저장하는 배열 끝에 삽입
         this.save_data.auto_save.push({
+          log_id: res.log_id,
+          created_at: new Date().toISOString(),
           user_input: {
             search_type: this.select_box.selected_item,
             repeat_cnt: this.repeat_cnt,

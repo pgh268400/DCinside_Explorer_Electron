@@ -83,7 +83,7 @@ export async function save_search_log(
   data: ArticleData[], // 저장할 게시글 데이터 배열
   user_input: UserInput, // 저장할 검색 파라미터
   mode: Mode // 저장 모드 (auto/manual)
-): Promise<void> {
+): Promise<number> {
   const db = get_db(mode); // 해당 모드의 DB 인스턴스
   const key = get_key(mode); // 해당 모드의 키 이름
 
@@ -111,7 +111,7 @@ export async function save_search_log(
     db.putSync(key, [...existing, new_log]); // 기존 로그 배열 뒤에 새 로그 추가
   });
 
-  return Promise.resolve(); // Promise<void> 반환
+  return new_id; // 새로 생성된 log_id 반환
 }
 
 // =====================================
