@@ -268,11 +268,13 @@ export default defineComponent({
       }
     },
     onGridReady(params: GridReadyEvent) {
-      // console.log("ready");
       this.ag_grid_vue.grid_api = params.api;
       this.ag_grid_vue.grid_column_api = params.columnApi;
 
-      // params.api.sizeColumnsToFit(); // 열 너비 자동 조절
+      // 그리드가 준비되면 즉시 페이지네이션 상태 업데이트
+      this.$nextTick(() => {
+        this.onPaginationChanged();
+      });
     },
     onGridSizeChanged(params: any) {
       // params.api.sizeColumnsToFit();

@@ -8,15 +8,15 @@ import {
   ipcMain,
   shell,
   clipboard,
+  session,
 } from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
-import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import path from "path";
 import { register_database_handlers } from "./ipc/database";
 import { register_filesystem_handlers } from "./ipc/filesystem";
 import { register_dcinside_handlers } from "./ipc/dcinside";
 import { register_window_handlers } from "./ipc/window";
-import { IPCChannel } from "@/types/ipc";
+import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 
 // 개발 모드 / 배포 모드 검사용 변수
 const is_development = process.env.NODE_ENV !== "production";
@@ -46,6 +46,12 @@ async function createWindow() {
 
     // 윈도우 타이틀 바 지우기 (윈도우 창 테두리 지우기)
     frame: false,
+
+    // 투명 배경 활성화
+    // transparent: true,
+
+    // 창의 모서리를 둥글게 만들기
+    // roundedCorners: true,
 
     webPreferences: {
       /*
@@ -100,21 +106,54 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
+// Vue DevTools 설치 함수
+// Vue2 에 맞는 Legacy 버전의 DevTools를 자동 설치
+async function install_vue_dev_tools() {
+  if (is_development && !process.env.IS_TEST) {
+    try {
+      // electron-devtools-installer만 사용하여 설치
+      await installExtension(LEGACY_VUE2_DEVTOOLS_ID, {
+        loadExtensionOptions: {
+          allowFileAccess: true,
+        },
+        forceDownload: true,
+      });
+
+      console.log("✅ Vue 2 DevTools 설치 성공");
+    } catch (e: any) {
+      console.error("❌ Vue 2 DevTools 설치 실패:", e);
+      console.error("에러 상세 정보:", {
+        message: e.message,
+        stack: e.stack,
+        code: e.code,
+      });
+
+      // 설치 실패 시 재시도
+      try {
+        console.log("Vue 2 DevTools 재설치 시도 중...");
+        await installExtension(LEGACY_VUE2_DEVTOOLS_ID, {
+          loadExtensionOptions: {
+            allowFileAccess: true,
+          },
+          forceDownload: true,
+        });
+
+        console.log("✅ Vue 2 DevTools 재설치 성공");
+      } catch (retryError: any) {
+        console.error("❌ Vue 2 DevTools 재설치 실패:", retryError);
+      }
+    }
+  }
+}
+
 /*
   이 메서드는 Electron이 초기화를 모두 마치고
   브라우저 창을 생성할 준비가 되었을 때 호출된다.
   일부 API는 이 이벤트 이후에만 사용할 수 있다.
 */
 app.on("ready", async () => {
-  // if (isDevelopment && !process.env.IS_TEST) {
-  //   // Vue Devtools Legacy 버전 설치 - Vue2를 사용중이기 때문
-  //   try {
-  //     await installExtension(LEGACY_VUE2_DEVTOOLS_ID);
-  //   } catch (e: any) {
-  //     console.error("❌ Vue DevTools 설치 실패:", e.toString());
-  //   }
-  // }
-  createWindow(); // 이 아래에 IPC 핸들러 등록
+  await install_vue_dev_tools();
+  createWindow();
 });
 
 // DB CRUD 관련 IPC 핸들러 등록
