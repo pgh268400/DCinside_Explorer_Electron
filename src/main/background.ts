@@ -19,7 +19,9 @@ import {
   get_full_logs,
   load_search_logs,
   save_search_log,
+  delete_search_log,
 } from "./modules/database";
+import fs from "fs";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -197,6 +199,22 @@ app.on("ready", async () => {
     }
   );
 
+  // 파일 시스템 관련 IPC 핸들러
+  ipcMain.handle(
+    IPCChannel.FileSystem.SAVE_SETTINGS,
+    async (_event, file_path: string, data: any) => {
+      try {
+        // 들어온 데이터를 그대로 들어온 경로에 저장
+        const json_data = JSON.stringify(data, null, 2);
+        await fs.promises.writeFile(file_path, json_data, "utf-8");
+        return { success: true };
+      } catch (error: any) {
+        console.error("[File System] 오류 발생:", error);
+        return { success: false, error: error.message };
+      }
+    }
+  );
+
   /*
     갤러리 텍스트명 조회 IPC 처리
     ex)
@@ -252,16 +270,6 @@ ipcMain.handle(
     return await load_search_logs(load_mode);
   }
 );
-
-// ipcMain.handle("db-delete-search-log", async (_evt, sessionId: number) => {
-//   try {
-//     delete_search_log(sessionId);
-//     return { success: true };
-//   } catch (err: any) {
-//     console.error("[db-delete-search-log] 오류 발생:", err);
-//     return { success: false, error: err.message };
-//   }
-// });
 
 // Exit cleanly on request from parent process in development mode.
 if (isDevelopment) {

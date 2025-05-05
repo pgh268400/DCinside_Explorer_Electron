@@ -504,63 +504,67 @@ export default Vue.extend({
       (수동 저장이 다 이루어지기 전까진 버튼이 로딩 상태로 변함)
     */
     async save_manual_data() {
-      //   try {
-      //     this.save_button.is_loading = true; // 버튼을 로딩 상태로 변경
-      //     // 먼저 설정 파일을 불러온다
-      //     const data = await fs.promises.readFile(
-      //       this.setting_file_location,
-      //       "utf-8"
-      //     );
-      //     // data를 json으로 파싱한다
-      //     const parsed_data: SaveData = JSON.parse(data);
-      //     if (!parsed_data.manual_save) {
-      //       parsed_data.manual_save = [];
-      //     }
-      //     // 현재 검색한 내용을 기록한다.
-      //     parsed_data.manual_save.push({
-      //       user_input: {
-      //         search_type: this.select_box.selected_item,
-      //         repeat_cnt: this.repeat_cnt,
-      //         gallery_id: this.gallery_id,
-      //         keyword: this.keyword,
-      //       },
-      //       article_data: this.table_rows,
-      //     });
-      //     // 수동 저장 데이터를 RAM(data())에도 저장한다 (불러오기 만을 위한 용도)
-      //     this.save_data.manual_save = parsed_data.manual_save;
-      //     // parsed_data 객체를 JSON 문자열로 변환
-      //     const json_data = JSON.stringify(parsed_data, null, 2);
-      //     try {
-      //       // JSON 데이터를 파일에 씁니다.
-      //       await fs.promises.writeFile(this.setting_file_location, json_data);
-      //       console.log(
-      //         "[수동 저장] 검색 데이터가 파일에 성공적으로 저장되었습니다."
-      //       );
-      //     } catch (error) {
-      //       console.error(
-      //         "[수동 저장] 데이터를 저장하는 중 오류가 발생했습니다.",
-      //         error
-      //       );
-      //     }
-      //   } catch (error: any) {
-      //     console.log(error);
-      //   } finally {
-      //     this.save_button.is_loading = false; // 버튼을 로딩 상태에서 해제
-      //     this.$toast("저장이 완료되었습니다", {
-      //       position: "bottom-center",
-      //       timeout: 718,
-      //       closeOnClick: true,
-      //       pauseOnFocusLoss: true,
-      //       pauseOnHover: false,
-      //       draggable: true,
-      //       draggablePercent: 0.6,
-      //       showCloseButtonOnHover: true,
-      //       hideProgressBar: true,
-      //       closeButton: "button",
-      //       icon: true,
-      //       rtl: false,
-      //     } as any);
-      //   }
+      try {
+        this.save_button.is_loading = true; // 버튼을 로딩 상태로 변경
+
+        // IPC로 저장 요청할 데이터 형식
+        const data = {
+          mode: "manual",
+          user_input: {
+            search_type: this.select_box.selected_item,
+            repeat_cnt: this.repeat_cnt,
+            gallery_id: this.gallery_id,
+            keyword: this.keyword,
+          },
+          article_data: {
+            items: this.table_rows,
+          },
+        };
+
+        console.time("DB 저장에 걸린 시간 : ");
+        const res = await ipcRenderer.invoke(
+          IPCChannel.DB.SAVE_ARTICLE_SEARCH_LOG,
+          data
+        );
+        console.timeEnd("DB 저장에 걸린 시간 : ");
+
+        if (res.success) {
+          console.log("[수동 저장] DB에 글 저장 완료");
+
+          // 데이터 바인딩 수행
+          // 수동 저장 데이터 업데이트, 메모리로 저장하는 배열 끝에 삽입
+          this.save_data.manual_save.push({
+            user_input: {
+              search_type: this.select_box.selected_item,
+              repeat_cnt: this.repeat_cnt,
+              gallery_id: this.gallery_id,
+              keyword: this.keyword,
+            },
+            article_data: this.table_rows,
+          });
+
+          this.$toast("저장이 완료되었습니다", {
+            position: "bottom-center",
+            timeout: 718,
+            closeOnClick: true,
+            pauseOnFocusLoss: true,
+            pauseOnHover: false,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: true,
+            hideProgressBar: true,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+          } as any);
+        } else {
+          console.error("[수동 저장] DB에 글 저장 실패:", res.error);
+        }
+      } catch (error: any) {
+        console.error("[수동 저장] 오류 발생:", error);
+      } finally {
+        this.save_button.is_loading = false; // 버튼을 로딩 상태에서 해제
+      }
     },
 
     async save_ui_data() {
@@ -585,17 +589,22 @@ export default Vue.extend({
         } as Settings,
       };
 
+      // IPC로 파일 저장 요청
       try {
-        await fs.promises.writeFile(
+        const result = await ipcRenderer.invoke(
+          IPCChannel.FileSystem.SAVE_SETTINGS,
           this.setting_file_location,
-          // 들여쓰기까지 포함해 깔끔하게 저장
-          JSON.stringify(data, null, 2)
+          data
         );
-        console.log(data, "UI 데이터 저장이 완료되었습니다.");
+
+        if (!result.success) {
+          throw new Error(result.error);
+        }
       } catch (err) {
         console.error(err);
       }
     },
+
     click_auto_save_item(article: SaveArticleData) {
       this.selected_auto_save_data = article;
       this.is_open_save_data = !this.is_open_save_data;
@@ -740,37 +749,59 @@ export default Vue.extend({
       */
       this.vuex_gallery_id = this.gallery_id;
 
-      // 만약에 자동 저장이 켜져있으면서 저장할 내용이 있으면 DB에 글을 저장
+      // 자동 저장이 활성화 되어 있고, 저장할 게 있다면 자동 저장 수행
       if (this.settings.auto_save.auto_save_result && items.length > 0) {
-        // 저장할 때 갤러리 id에 대응되는 갤러리 명도 저장, IPC 요청이 필요
+        await this.save_auto_search_result(items);
+      }
+    },
 
-        // IPC로 저장 요청할 데이터 형식
-        const data = {
-          mode: "auto",
+    // 자동 저장 로직을 처리하는 함수
+    async save_auto_search_result(items: AGGridVueArticle[]) {
+      // 자동 저장 개수 초과 검사
+      if (
+        this.save_data.auto_save.length >= this.settings.auto_save.max_auto_save
+      ) {
+        console.log("자동 저장 개수를 초과해 DB에 저장하지 않습니다.");
+        return; // Early return
+      }
+
+      // IPC로 저장 요청할 데이터 형식
+      const data = {
+        mode: "auto",
+        user_input: {
+          search_type: this.select_box.selected_item,
+          repeat_cnt: this.repeat_cnt,
+          gallery_id: this.gallery_id,
+          keyword: this.keyword,
+        },
+        article_data: {
+          items,
+        },
+      };
+
+      console.time("DB 저장에 걸린 시간 : ");
+      const res = await ipcRenderer.invoke(
+        IPCChannel.DB.SAVE_ARTICLE_SEARCH_LOG,
+        data
+      );
+      console.timeEnd("DB 저장에 걸린 시간 : ");
+
+      if (res.success) {
+        console.log("[자동 저장] DB에 글 저장 완료");
+
+        // 데이터 바인딩 수행
+        // 자동 저장 데이터 업데이트, 메모리로 저장하는 배열 끝에 삽입
+        this.save_data.auto_save.push({
           user_input: {
             search_type: this.select_box.selected_item,
             repeat_cnt: this.repeat_cnt,
             gallery_id: this.gallery_id,
             keyword: this.keyword,
           },
-          article_data: {
-            items,
-          },
-        };
-        console.log(data);
-
-        console.time("DB 저장에 걸린 시간 : ");
-        const res = await ipcRenderer.invoke(
-          IPCChannel.DB.SAVE_ARTICLE_SEARCH_LOG,
-          data
-        );
-        console.timeEnd("DB 저장에 걸린 시간 : ");
-
-        if (res.success) {
-          console.log("[자동 저장] DB에 글 저장 완료");
-        } else {
-          console.error("[자동 저장] DB에 글 저장 실패:", res.error);
-        }
+          article_data: items,
+        });
+      } else {
+        console.error("[자동 저장] DB에 글 저장 실패:", res.error);
       }
     },
   },
@@ -806,19 +837,7 @@ export default Vue.extend({
       },
     },
   },
-  watch: {
-    /*
-    // max_parallel 이 object 안에 들어가 있으므로
-    // 프로퍼티 내부의 중첩된 값 변경을 감지하려면 Deep Watcher (깊은 감시자)를 사용해야 함
-    // https://jodong.tistory.com/9
-    "settings.program_entire_settings.max_parallel": {
-      deep: true,
-      handler(new_val: string, old_val: string) {
-        console.log("max_parallel", new_val);
-      },
-    },
-    */
-  },
+  watch: {},
 });
 </script>
 

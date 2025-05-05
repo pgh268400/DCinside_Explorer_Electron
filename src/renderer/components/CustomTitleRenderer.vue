@@ -6,21 +6,15 @@
   <span v-html="value"></span>
 </template>
 
-<script lang="ts">
+<script>
 export default {
-  data() {
-    return {
-      value: "", // 최종 렌더링할 HTML 문자열
-    };
-  },
-
   beforeMount() {
     /*
       Ag-Grid-Vue에서 전달받은 HTML Raw 문자열
       참고 : ag-grid-vue에서는 Custom Renderer 컴포넌트에 자동으로 params 객체를 주입한다.
-      params는 Ag-Grid-vue가 런타임에 동적으로 주입하기에 타입 추론이 어려워서, any로 처리해서 무시한다.
+      params는 Ag-Grid-vue가 런타임에 동적으로 주입하기에 타입 추론이 어려워서 여기선 ts를 적용하지 않는다.
     */
-    const raw_html_text: string = (this as any).params.value; // title에 들어오는 html 형태의 텍스트
+    const raw_html_text = this.params.value;
     this.value = raw_html_text; // value에 반영
   },
 };
