@@ -3,10 +3,13 @@ const { defineConfig } = require("@vue/cli-service");
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin");
 const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 
+/**
+ * @type {import('@vue/cli-service').ProjectOptions}
+ */
 module.exports = defineConfig({
   transpileDependencies: ["vuetify"],
   configureWebpack: (config) => {
-    config.plugins.push(new NodePolyfillPlugin());
+    config.plugins?.push(new NodePolyfillPlugin());
     config.target = "electron-renderer";
   },
 
@@ -22,7 +25,6 @@ module.exports = defineConfig({
         config.module
           .rule("babel")
           .before("ts")
-          // .test(/C:\\Users\\pgh26\\Lab\\JavaScript\\DCParser\\dcparser\.ts$/)
           .test(/src\\main\\modules\\dcparser\.ts$/)
           .use("babel")
           .loader("babel-loader")
