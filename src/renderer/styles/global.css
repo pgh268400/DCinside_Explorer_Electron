@@ -14,7 +14,43 @@ body,
   font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
 }
 
-/* 전역 스타일로 spoiler 클래스를 초록색 굵게 처리 */
+/* 전역 스타일로 spoiler 클래스를 초록색 처리 */
 .spoiler {
   color: #059a25;
+}
+
+.v-application .text-h6 {
+  font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
+}
+
+/* ============= 제목 스크롤 애니메이션 ============= */
+.title-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.title-text {
+  display: inline-block;
+  transition: transform 0.3s ease;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.title-container:hover .title-text {
+  text-overflow: clip;
+  overflow: visible;
+  animation: scrollTitle 10s linear infinite;
+}
+
+@keyframes scrollTitle {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }

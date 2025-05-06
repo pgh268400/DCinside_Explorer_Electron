@@ -207,17 +207,13 @@ export default Vue.extend({
 
   // 종료 직전에 실행되는 함수
   async beforeDestroy() {
-    // 검색중에 강제 종료하면 파일에 저장하지 않는다. (버그 방지용)
-    if (this.search_btn.is_loading) {
-      return;
-    }
     await this.save_ui_data();
   },
 
   methods: {
     // 가장 초기에 UI 설정 파일을 준비하기 위해 호출되는 함수(mounted에서 사용)
     async initialize_ui() {
-      // 기본 설정 데이터 준비
+      // 기본 설정값
       const default_data = {
         // v-select는 첫 번째 아이템으로 기본값 설정
         search_type: this.select_box.items[0],
@@ -240,6 +236,7 @@ export default Vue.extend({
 
       try {
         console.time("설정 파일 처리 시간");
+
         // IPC로 설정 파일 초기화 및 로드 요청
         const result = await ipcRenderer.invoke(
           IPCChannel.FileSystem.INITIALIZE_SETTINGS,
@@ -257,12 +254,15 @@ export default Vue.extend({
           this.select_box.selected_item = parsed_data.search_type;
 
           // Vuex store에 settings 저장
-          this.$store.commit("set_settings", parsed_data.settings);
+          this.settings = parsed_data.settings;
 
           console.log("설정 파일을 성공적으로 불러왔습니다.");
           console.timeEnd("설정 파일 처리 시간");
         } else {
-          console.error("설정 파일 초기화 중 오류 발생:", result.error);
+          console.error(
+            "설정 파일을 불러오는 중 오류가 발생했습니다.",
+            result.error
+          );
         }
       } catch (e) {
         console.error("설정 파일을 불러오는 중 오류가 발생했습니다.", e);
@@ -420,7 +420,7 @@ export default Vue.extend({
         repeat_cnt: this.repeat_cnt,
         gallery_id: this.gallery_id,
         keyword: this.keyword,
-        settings: this.$store.getters.get_settings,
+        settings: this.settings,
       };
 
       // IPC로 파일 저장 요청
@@ -503,6 +503,17 @@ export default Vue.extend({
       // 버튼에 로딩 상태 반영
       this.search_btn.is_loading = true;
 
+      // 디버깅용 출력
+      console.log({
+        id: this.gallery_id,
+        repeat_cnt: this.repeat_cnt,
+        keyword: this.keyword,
+        search_type: this.string_to_query(this.select_box.selected_item),
+        option: {
+          requests_limit: this.settings.program_entire_settings.max_parallel,
+        },
+      });
+
       // 웹 요청 보내기
       ipcRenderer.send(IPCChannel.Web.REQUEST, {
         id: this.gallery_id,
@@ -513,14 +524,6 @@ export default Vue.extend({
           requests_limit: this.settings.program_entire_settings.max_parallel,
         },
       } as DCWebRequest);
-
-      // 디버깅용 출력
-      console.log({
-        id: this.gallery_id,
-        repeat_cnt: this.repeat_cnt,
-        keyword: this.keyword,
-        search_type: this.string_to_query(this.select_box.selected_item),
-      });
 
       /*
         주의 : 아래 IPC 응답을 받기 위해 리스너 함수를 ipcRenderer.on() 이 아닌 반드시 .once() 로 등록해야 한다

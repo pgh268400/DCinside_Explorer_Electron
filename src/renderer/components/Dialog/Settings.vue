@@ -23,10 +23,7 @@
               label="최대 병렬 처리 횟수"
               outlined
               clearable
-              v-model.number="
-                local_settings.program_entire_settings.max_parallel
-              "
-              @input="update_setting"
+              v-model.number="settings.program_entire_settings.max_parallel"
               height="auto"
               type="number"
               hide-spin-buttons></v-text-field>
@@ -57,7 +54,7 @@
               <br />
               <b>
                 기본값 :
-                {{ local_settings.program_entire_settings.max_parallel }}
+                {{ settings.program_entire_settings.max_parallel }}
               </b>
             </span>
           </v-tooltip>
@@ -70,8 +67,9 @@
           <v-list-item-action>
             <!-- 검색 시 기존 결과 초기화 체크박스 -->
             <v-checkbox
-              v-model="local_settings.user_preferences.clear_data_on_search"
-              @change="update_setting"></v-checkbox>
+              v-model="
+                settings.user_preferences.clear_data_on_search
+              "></v-checkbox>
           </v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>검색 시 기존 검색 결과 초기화</v-list-item-title>
@@ -88,8 +86,7 @@
           <v-list-item-action>
             <!-- 자동 저장 활성화 체크박스 -->
             <v-checkbox
-              v-model="local_settings.auto_save.auto_save_result"
-              @change="update_setting"></v-checkbox>
+              v-model="settings.auto_save.auto_save_result"></v-checkbox>
           </v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>자동 저장 활성화</v-list-item-title>
@@ -106,14 +103,11 @@
               label="최대 자동 저장 횟수"
               outlined
               clearable
-              v-model.number="local_settings.auto_save.max_auto_save"
-              @input="update_setting"
+              v-model.number="settings.auto_save.max_auto_save"
               height="auto"
               type="number"
               hide-spin-buttons
-              :disabled="
-                !local_settings.auto_save.auto_save_result
-              "></v-text-field>
+              :disabled="!settings.auto_save.auto_save_result"></v-text-field>
           </v-list-item-content>
           <!-- 자동 저장 도움말 툴팁 -->
           <v-tooltip right :max-width="404">
@@ -135,7 +129,7 @@
               큰 값을 입력하면 무한정 저장하게 할 수 있으나 용량도 무한히 늘어날
               수 있으니 주의해야 합니다.
               <br />
-              <b>기본값 : {{ local_settings.auto_save.max_auto_save }}</b>
+              <b>기본값 : {{ settings.auto_save.max_auto_save }}</b>
             </span>
           </v-tooltip>
         </v-list-item>
@@ -151,7 +145,7 @@
 <script lang="ts">
 // Vue와 필요한 모듈들을 임포트
 import Vue from "vue";
-import { mapGetters, mapMutations } from "vuex";
+import { mapMutations } from "vuex";
 import { Settings } from "../../../types/view";
 
 export default Vue.extend({
@@ -176,24 +170,20 @@ export default Vue.extend({
   data() {
     return {
       dialog: this.value,
-      local_settings: {
-        program_entire_settings: {
-          max_parallel: 100,
-        },
-        user_preferences: {
-          clear_data_on_search: true,
-        },
-        auto_save: {
-          auto_save_result: true,
-          max_auto_save: 10,
-        },
-      } as Settings,
+      is_initialized: false,
     };
   },
 
   // Vuex getter를 컴포넌트에 매핑
   computed: {
-    ...mapGetters(["get_settings"]),
+    settings: {
+      get(): Settings {
+        return this.$store.getters.get_settings;
+      },
+      set(value: Settings) {
+        this.$store.commit("set_settings", value);
+      },
+    },
   },
 
   // 데이터 변경 감시를 위한 watch 옵션
@@ -203,15 +193,6 @@ export default Vue.extend({
     },
     dialog(val) {
       this.$emit("input", val);
-    },
-    get_settings: {
-      immediate: true,
-      handler(val) {
-        // 다이얼로그가 열릴 때만 초기값 설정
-        if (this.dialog) {
-          this.local_settings = JSON.parse(JSON.stringify(val));
-        }
-      },
     },
   },
 
@@ -227,15 +208,7 @@ export default Vue.extend({
 
     // 설정 저장 및 다이얼로그 닫기 메서드
     submit() {
-      // 설정 저장 후 다이얼로그 닫기
-      this.set_settings(this.local_settings);
       this.close();
-    },
-
-    // 설정값이 변경될 때마다 호출되는 메서드
-    update_setting() {
-      // 현재 설정값을 Vuex store에 반영
-      this.set_settings(this.local_settings);
     },
   },
 });
