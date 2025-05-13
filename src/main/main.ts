@@ -143,8 +143,16 @@ async function install_vue_dev_tools() {
   브라우저 창을 생성할 준비가 되었을 때 호출된다.
   일부 API는 이 이벤트 이후에만 사용할 수 있다.
 */
-app.on("ready", async () => {
-  await install_vue_dev_tools();
+app.whenReady().then(() => {
+  /*
+    메모리 제한 해제
+    2022년부터 나를 몇 년째 고생시키던 힙 메모리 제한 해제
+    작동한다고 생각했는데 맞는지 아닌지 잘 모르겠다..
+    근본적으로 글 검색할 때 메모리 누수가 발생하는 거 같은데
+    글 검색 방식 자체를 바꿔서 해결해야 할 것으로 보인다. 일단은 미정
+  */
+  app.commandLine.appendSwitch("js-flags", "--max-old-space-size=8192");
+  install_vue_dev_tools();
   createWindow();
 });
 
