@@ -29,7 +29,7 @@
                 <!-- 자동 저장 데이터가 없을 때 표시되는 알림 -->
                 <v-list-item v-if="auto_save_data.length === 0">
                   <v-list-item-content>
-                    <v-alert color="blue" type="info">
+                    <v-alert color="blue" type="info" class="no-drag">
                       자동 저장된 데이터가 존재하지 않습니다.
                     </v-alert>
                   </v-list-item-content>
@@ -108,7 +108,7 @@
                 <!-- 수동 저장 데이터가 없을 때 표시되는 알림 -->
                 <v-list-item v-if="manual_save_data.length === 0">
                   <v-list-item-content>
-                    <v-alert color="blue" type="info">
+                    <v-alert color="blue" type="info" class="no-drag">
                       수동 저장된 데이터가 존재하지 않습니다.
                     </v-alert>
                   </v-list-item-content>
@@ -356,5 +356,12 @@ export default Vue.extend({
 .over_flow {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 탭이 스크롤을 내려도 상단에 고정되도록 설정 */
+.v-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 </style>
