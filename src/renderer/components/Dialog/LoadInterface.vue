@@ -364,4 +364,8 @@ export default Vue.extend({
   top: 0;
   z-index: 1;
 }
+
+.py-4 {
+  padding-bottom: 0px !important;
+}
 </style>
