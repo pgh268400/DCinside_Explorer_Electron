@@ -28,7 +28,7 @@
 
 ## 빌드 방법
 ```
-node version == v16.20.0
+node version == v22.15.0
 ```
 ```
 npm i
