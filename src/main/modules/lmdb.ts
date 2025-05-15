@@ -4,7 +4,8 @@ import path from "path"; // 경로 처리를 위한 path 모듈
 // =====================================
 // ⚙️ LMDB 스토어 초기화 설정
 // =====================================
-const db_dir = path.resolve(__dirname, "../dc_config/"); // LMDB 파일이 저장될 디렉터리 절대 경로
+// const db_dir = path.resolve(__dirname, "./dc_config/"); // LMDB 파일이 저장될 디렉터리 절대 경로
+const db_dir = "./dc_config/";
 const auto_key = "auto_save"; // 자동 저장용 키 이름
 const manual_key = "manual_save"; // 수동 저장용 키 이름
 const seq_key = "meta:lastLogId"; // 로그 식별 시퀀스 관리용 키
