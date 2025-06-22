@@ -1,3 +1,8 @@
+/*
+  C# CLI 프로그램으로 별도 구현된 성능 좋은 검색기로 검색 코드 대체
+  IPC 통신은 Node.js (부모 프로세스) -> C# (자식 프로세스) 생성 형태로 이루어지며
+  stdout, stderr 스트림 파이프를 이용해 통신한다.
+*/
 import { spawn, exec as origin_exec } from "child_process"; // child_process 모듈에서 spawn, exec 함수 가져온다
 import * as path from "path"; // path 모듈을 path 이름으로 불러온다
 import { promises as fs } from "fs"; // fs/promises 모듈을 fs 이름으로 불러온다

@@ -505,6 +505,7 @@ export default Vue.extend({
 
     // 검색 버튼 누를 시 실행되는 함수
     async search_btn_click() {
+      console.time("검색부터 렌더링까지 총 경과 시간");
       // 여기서 그냥 웹 요청 보내면 CORS가 걸려서 ipc로 백그라운드 node.js 서버에서
       // 웹 요청을 보내고 응답을 받아서 화면에 렌더링하는 방식으로 구현해야 함
 
@@ -582,6 +583,10 @@ export default Vue.extend({
 
       // 데이터 바인딩 (표에 데이터 반영)
       this.table_rows = items;
+
+      this.$nextTick(() => {
+        console.timeEnd("검색부터 렌더링까지 총 경과 시간");
+      });
 
       // 버튼 로딩 완료 반영
       this.search_btn.is_loading = false;
